@@ -1,0 +1,106 @@
+[
+  {
+    "repository": "uncleeai--VibeTools",
+    "source": "js/audioPreview.js",
+    "runtime": "vendor/vibe-audio.js",
+    "original_sha256": "565e5f721a6fe58e797edeaaf87da40b5f87c86afb2b28bf77c34b66e81bea9a",
+    "runtime_sha256": "55b0273b7ae03bcfdffe14172583a8009594072ed9c7ff98d30f866b6d9322b1",
+    "modified": true
+  },
+  {
+    "repository": "thinkvp--Syncitol",
+    "source": "uxp/js/dsp.js",
+    "runtime": "vendor/syncitol-dsp.js",
+    "original_sha256": "4bafeb0b26fb7b85868340bbdc143bc3cdea6683e7060ccec8856269a9fe284e",
+    "runtime_sha256": "141fadc1bd223312dfe01cbf50b05159afe305cae28eb2e360e4234b7eec8491",
+    "modified": true
+  },
+  {
+    "repository": "Thirosawasan--OpenCutz",
+    "source": "opencut/core/silence.py",
+    "runtime": "worker/opencut/core/silence.py",
+    "original_sha256": "b21b2b2cafcad5886285987ab36c1b0a37c5da25a70ce54fbd89f4708fa39a33",
+    "runtime_sha256": "8bbaf318e686c77188924ae892227ad4f0a8dc174a66456006f939c417123bd2",
+    "modified": true
+  },
+  {
+    "repository": "Thirosawasan--OpenCutz",
+    "source": "opencut/core/repeat_detect.py",
+    "runtime": "worker/opencut/core/repeat_detect.py",
+    "original_sha256": "0e0af85b507ccbe0e0a6cc36e7702073b6ac60c642d2b459c4166fb0bc7bf081",
+    "runtime_sha256": "0e0af85b507ccbe0e0a6cc36e7702073b6ac60c642d2b459c4166fb0bc7bf081",
+    "modified": false
+  },
+  {
+    "repository": "Thirosawasan--OpenCutz",
+    "source": "opencut/core/captions.py",
+    "runtime": "worker/opencut/core/captions.py",
+    "original_sha256": "c685d47d58f319dc7bd24127076b778493e394a5fadbebd7fccd3dc5f87f8ac0",
+    "runtime_sha256": "7b7f514d70baf439e6fd71e7c25d2115794b6439e0c6f127436fa2f6c57551bb",
+    "modified": true
+  },
+  {
+    "repository": "Thirosawasan--OpenCutz",
+    "source": "opencut/core/audio.py",
+    "runtime": "worker/opencut/core/audio.py",
+    "original_sha256": "820509607e7e947bf7d9b02f789a6e8691441199d572116f7d94129ecbb557ae",
+    "runtime_sha256": "820509607e7e947bf7d9b02f789a6e8691441199d572116f7d94129ecbb557ae",
+    "modified": false
+  },
+  {
+    "repository": "Thirosawasan--OpenCutz",
+    "source": "opencut/core/transcript_cache.py",
+    "runtime": "worker/opencut/core/transcript_cache.py",
+    "original_sha256": "6f12ee1709225fd33d3d3edf908f0889796b2e4e02497f8020d6dba7882bde6c",
+    "runtime_sha256": "6f12ee1709225fd33d3d3edf908f0889796b2e4e02497f8020d6dba7882bde6c",
+    "modified": false
+  },
+  {
+    "repository": "Thirosawasan--OpenCutz",
+    "source": "opencut/core/zoom.py",
+    "runtime": "worker/opencut/core/zoom.py",
+    "original_sha256": "f16962084b8a5ba42eb98f34f56b3162da604539b115526d307269e56665e874",
+    "runtime_sha256": "f16962084b8a5ba42eb98f34f56b3162da604539b115526d307269e56665e874",
+    "modified": false
+  },
+  {
+    "repository": "Thirosawasan--OpenCutz",
+    "source": "opencut/utils/config.py",
+    "runtime": "worker/opencut/utils/config.py",
+    "original_sha256": "e9d94409b7c6c1dc4d1f9dcb70ff21775a8e8123fa138ac0d5aee7157e24bc78",
+    "runtime_sha256": "e9d94409b7c6c1dc4d1f9dcb70ff21775a8e8123fa138ac0d5aee7157e24bc78",
+    "modified": false
+  },
+  {
+    "repository": "Thirosawasan--OpenCutz",
+    "source": "opencut/utils/media.py",
+    "runtime": "worker/opencut/utils/media.py",
+    "original_sha256": "baf4784204ea34366afbff76a7772b63fdaf280e750edc0128a992303eb24933",
+    "runtime_sha256": "baf4784204ea34366afbff76a7772b63fdaf280e750edc0128a992303eb24933",
+    "modified": false
+  },
+  {
+    "repository": "Thirosawasan--OpenCutz",
+    "source": "opencut/export/premiere.py",
+    "runtime": "worker/opencut/export/premiere.py",
+    "original_sha256": "5d3f15b51c02be3f83c97872f02ad23885f9f94452fd74ece3a85846ea56fd10",
+    "runtime_sha256": "c6094928340e2cfa4f5243e52ec0c69848cc991bdca8163e1bb327f4f210cb67",
+    "modified": true
+  },
+  {
+    "repository": "uncleeai--VibeTools",
+    "source": "js/jungle.js",
+    "runtime": "vendor/jungle.js",
+    "original_sha256": "484ca16d7035cd6c908deb8756c35c13accde4c4429c6968b1a88b17c64cdcd4",
+    "runtime_sha256": "484ca16d7035cd6c908deb8756c35c13accde4c4429c6968b1a88b17c64cdcd4",
+    "modified": false
+  },
+  {
+    "repository": "georg-itgclaudeAgent--pr-extension",
+    "source": "extension/client/src/api/githubReleases.ts",
+    "runtime": "github-releases.js",
+    "original_sha256": "9aa6d61b2396596af199f0a57039a05690c6534fe30c2ccd86dfddc992d77034",
+    "runtime_sha256": "4c310d3a6d73308d13cb7db3e6e34016a256296554a015e4423755e0481be727",
+    "modified": true
+  }
+]

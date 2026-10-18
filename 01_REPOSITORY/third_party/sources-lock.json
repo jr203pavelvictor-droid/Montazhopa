@@ -1,0 +1,66 @@
+[
+  {
+    "repo": "georg-itgclaudeAgent/pr-extension",
+    "commit": "b2c703b9114aea21a430a4b9fac6ae153386b39a",
+    "branch": "main",
+    "repository_files": 51,
+    "local_text_files": 48,
+    "parent": null
+  },
+  {
+    "repo": "uncleeai/VibeTools",
+    "commit": "afa1cfa23742ebb88fd47273b090766817412195",
+    "branch": "main",
+    "repository_files": 39,
+    "local_text_files": 30,
+    "parent": null
+  },
+  {
+    "repo": "MishaManevich/SmartCut",
+    "commit": "967358f742e0ac2d313c3c1719af8a9b3ffd7882",
+    "branch": "main",
+    "repository_files": 50,
+    "local_text_files": 34,
+    "parent": null
+  },
+  {
+    "repo": "thinkvp/Syncitol",
+    "commit": "8378f89e4e905343da6e5d540ca001d3a275d512",
+    "branch": "main",
+    "repository_files": 43,
+    "local_text_files": 33,
+    "parent": null
+  },
+  {
+    "repo": "IronVisuals/IronFX",
+    "commit": "72c508b8f1479c36dbe40fe3a5862b73cb767ef3",
+    "branch": "main",
+    "repository_files": 17,
+    "local_text_files": 15,
+    "parent": null
+  },
+  {
+    "repo": "Thirosawasan/OpenCutz",
+    "commit": "1a5b05caf07b3baac52d19448ce8162c84c450b5",
+    "branch": "main",
+    "repository_files": 1313,
+    "local_text_files": 1212,
+    "parent": "SysAdminDoc/OpenCut"
+  },
+  {
+    "repo": "tvorimchudesa/watchdog-premiere",
+    "commit": "f01d2d8d42b74091eddcc771fe5597c7814f9628",
+    "branch": "master",
+    "repository_files": 522,
+    "local_text_files": 274,
+    "parent": null
+  },
+  {
+    "repo": "georg-itgclaudeAgent/genius-installer-manager",
+    "commit": "58eb7b4bed8373dac914d657b668735e1399cdfd",
+    "branch": "main",
+    "repository_files": 36,
+    "local_text_files": 33,
+    "parent": null
+  }
+]

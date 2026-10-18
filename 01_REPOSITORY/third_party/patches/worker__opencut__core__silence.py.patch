@@ -1,0 +1,11 @@
+--- opencut/core/silence.py
++++ worker/opencut/core/silence.py
+@@ -93,7 +93,7 @@
+         raise RuntimeError(f"FFmpeg timed out processing '{filepath}'")
+ 
+     if result.returncode != 0:
+-        logger.warning("FFmpeg silencedetect failed (rc=%d) for %s", result.returncode, filepath)
++        raise RuntimeError("FFmpeg silencedetect failed: " + result.stderr[-2000:])
+ 
+     # Parse silencedetect output from stderr
+     # Format: [silencedetect @ 0x...] silence_start: 1.234

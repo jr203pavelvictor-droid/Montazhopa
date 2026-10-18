@@ -1,0 +1,11 @@
+--- uxp/js/dsp.js
++++ vendor/syncitol-dsp.js
+@@ -20,7 +20,7 @@
+     if (typeof window !== "undefined") {
+         for (key in api) {
+             if (Object.prototype.hasOwnProperty.call(api, key)) {
+-                window[key] = api[key];
++                window.MZSyncDSP = api;
+             }
+         }
+     }

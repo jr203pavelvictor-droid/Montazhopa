@@ -1,0 +1,288 @@
+--- js/audioPreview.js
++++ vendor/vibe-audio.js
+@@ -1,19 +1,21 @@
++(function(){
++"use strict";
+ // Audio preview subsystem: waveform generation/rendering and the AudioPreview
+ // player (playback, live pitch via Jungle, on-the-fly pitch/reverse via ffmpeg).
+ // Extracted from main.js. Jungle is a global provided by js/jungle.js.
+ 
+-import { addLog } from './log.js';
+-
+-const fs = window.require('fs');
+-const path = window.require('path');
+-const os = window.require('os');
+-const { exec } = window.require('child_process');
+-
+-const extensionDir = decodeURIComponent(path.dirname(window.location.pathname.replace(/^\//, '')));
+-
+-// Bundled ffmpeg (vendored, librubberband-enabled) for pitch/reverse processing.
+-const FFMPEG_PATH = path.join(extensionDir, 'vendor', 'ffmpeg', 'ffmpeg.exe');
+-
++// Adapted for Montazhopa: optional Node I/O, cross-platform paths, honest errors.
++const fs = window.MZLocal.available ? window.require('fs') : null;
++async function readAudioFile(p) {
++    if (fs) {
++        const b = fs.readFileSync(p);
++        if (b.length > 64 * 1024 * 1024) throw Error('Preview limited to 64 MB');
++        return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
++    }
++    const response = await fetch(p);
++    if (!response.ok) throw Error('Cannot load audio');
++    return response.arrayBuffer();
++}
+ let audioContext = null;
+ const waveformCache = new Map(); // Cache waveform data by path
+ 
+@@ -22,8 +24,8 @@
+  */
+ async function generateWaveform(audioPath, numBars = 50) {
+     // Check cache first
+-    if (waveformCache.has(audioPath)) {
+-        return waveformCache.get(audioPath);
++    if (waveformCache.has(audioPath + ":" + numBars)) {
++        return waveformCache.get(audioPath + ":" + numBars);
+     }
+ 
+     try {
+@@ -32,15 +34,14 @@
+         }
+ 
+         // Read file
+-        const buffer = fs.readFileSync(audioPath);
+-        const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
++        const arrayBuffer = await readAudioFile(audioPath);
+ 
+         // Decode audio
+         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+         const channelData = audioBuffer.getChannelData(0);
+ 
+         // Calculate bars
+-        const samplesPerBar = Math.floor(channelData.length / numBars);
++        const samplesPerBar = Math.max(1, Math.floor(channelData.length / numBars));
+         const rawBars = [];
+         let maxBar = 0;
+ 
+@@ -63,15 +64,12 @@
+ 
+         // Cache result
+         const result = { bars, duration: audioBuffer.duration };
+-        waveformCache.set(audioPath, result);
++        if (waveformCache.size >= 8) waveformCache.delete(waveformCache.keys().next().value);
++        waveformCache.set(audioPath + ":" + numBars, result);
+         return result;
+     } catch (err) {
+         console.error('[VT] Waveform generation failed:', err);
+-        // Return fallback random bars
+-        return {
+-            bars: Array.from({ length: numBars }, () => 0.2 + Math.random() * 0.6),
+-            duration: 0
+-        };
++        throw Error('Audio waveform unavailable: ' + err.message);
+     }
+ }
+ 
+@@ -83,12 +81,11 @@
+         if (!audioContext) {
+             audioContext = new (window.AudioContext || window.webkitAudioContext)();
+         }
+-        const buffer = fs.readFileSync(audioPath);
+-        const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
++        const arrayBuffer = await readAudioFile(audioPath);
+         return await audioContext.decodeAudioData(arrayBuffer);
+     } catch (err) {
+         console.error('[VT] Audio buffer load failed:', err);
+-        return null;
++        throw err;
+     }
+ }
+ 
+@@ -243,6 +240,7 @@
+             return;
+         }
+ 
++        const loadToken = this.loadToken = (this.loadToken || 0) + 1;
+         this.asset = asset;
+         this.nameEl.textContent = asset.name;
+         this.nameEl.title = asset.name;
+@@ -254,6 +252,7 @@
+         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+ 
+         // Show UI
++        document.body.classList.add('audio-preview-open');
+         this.el.classList.remove('hidden');
+         this.el.style.display = 'flex';
+         requestAnimationFrame(() => {
+@@ -268,21 +267,30 @@
+ 
+         // Load Audio Buffer
+         // We use a separate local load because generateWaveform might be cached without buffer.
+-        this.audioBuffer = await loadAudioBuffer(asset.path);
++        const loaded = await loadAudioBuffer(asset.path);
++        if (loadToken !== this.loadToken) return;
++        this.audioBuffer = loaded;
+ 
+         // Set initial pitch UI
+         if (this.pitchValue) this.pitchValue.textContent = this.pitch.toFixed(1) + 'x';
+         this.updateTimeDisplay();
+ 
+         // Generate Waveform
+-        this.waveformData = await generateWaveform(asset.path, 200);
++        const waveform = await generateWaveform(asset.path, 200);
++        if (loadToken !== this.loadToken) return;
++        this.waveformData = waveform;
+         this.draw();
+     },
+ 
+     hide: function () {
++        this.loadToken = (this.loadToken || 0) + 1;
+         this.stop();
++        if(this.audioCtx&&this.audioCtx.state==='running')this.audioCtx.suspend();
++        document.body.classList.remove('audio-preview-open');
+         this.el.classList.remove('visible');
++        const token=this.loadToken;
+         setTimeout(() => {
++            if(token!==this.loadToken)return;
+             this.el.classList.add('hidden');
+             this.el.style.display = 'none';
+         }, 300);
+@@ -290,7 +298,8 @@
+ 
+     stop: function () {
+         if (this.source) {
+-            try { this.source.stop(); } catch (e) { }
++            this.source.onended = null;
++            try { this.source.stop(); this.source.disconnect(); } catch (e) { }
+             this.source = null;
+         }
+         this.isPlaying = false;
+@@ -380,6 +389,8 @@
+         this.playbackStartTime = this.audioCtx.currentTime - offset;
+         this._isReversedPlayback = isReversed;
+ 
++        if (this.source.buffer.duration <= 0) return;
++        offset = Math.min(offset, Math.max(0, this.source.buffer.duration - 0.0001));
+         this.source.start(0, offset);
+         this.isPlaying = true;
+ 
+@@ -402,7 +413,8 @@
+ 
+     pause: function () {
+         if (this.source) {
+-            try { this.source.stop(); } catch (e) { }
++            this.source.onended = null;
++            try { this.source.stop(); this.source.disconnect(); } catch (e) { }
+             this.source = null;
+         }
+ 
+@@ -430,7 +442,8 @@
+ 
+         if (this.isPlaying) {
+             if (this.source) {
+-                try { this.source.stop(); } catch (e) { }
++                this.source.onended = null;
++            try { this.source.stop(); this.source.disconnect(); } catch (e) { }
+             }
+             this.play();
+         } else {
+@@ -470,7 +483,8 @@
+             this.lastPausePosition = Math.max(0, Math.min(this.lastPausePosition, this.audioBuffer.duration));
+ 
+             if (this.source) {
+-                try { this.source.stop(); } catch (e) { }
++                this.source.onended = null;
++            try { this.source.stop(); this.source.disconnect(); } catch (e) { }
+             }
+             // Invalidate reversed buffer cache when reverse state changes
+             this._reversedBuffer = null;
+@@ -594,79 +608,9 @@
+         }
+     },
+ 
+-    scheduleFFmpegProcessing: function() {
+-        if (this.ffmpegTimeout) clearTimeout(this.ffmpegTimeout);
+-        
+-        // Kill previous process if it's still running
+-        if (this.ffmpegProcess) {
+-            try { this.ffmpegProcess.kill('SIGKILL'); } catch (e) {}
+-            this.ffmpegProcess = null;
+-        }
+-
+-        // Delete the previously processed file so they don't pile up during a session
+-        if (this.processedAudioPath) {
+-            try { fs.unlinkSync(this.processedAudioPath); } catch (e) {}
+-        }
+-        this.processedAudioPath = null;
+-        
+-        if (this.pitch === 1.0 && (!this.reverseCheck || !this.reverseCheck.checked)) {
+-            this.isProcessing = false;
+-            this.processingPromise = Promise.resolve(null);
+-            return; // No processing needed
+-        }
+-
+-        this.isProcessing = true;
+-        let resolvePromise;
+-        this.processingPromise = new Promise((resolve) => { resolvePromise = resolve; });
+-
+-        this.ffmpegTimeout = setTimeout(() => {
+-            if (!this.asset) {
+-                this.isProcessing = false;
+-                resolvePromise(null);
+-                return;
+-            }
+-            const ffmpegExe = FFMPEG_PATH;
+-            if (!fs.existsSync(ffmpegExe)) {
+-                addLog('ERROR: ffmpeg not found at ' + ffmpegExe + ' - pitch/reverse disabled. Restore vendor/ffmpeg/ffmpeg.exe.', 'error');
+-                this.isProcessing = false;
+-                resolvePromise(null);
+-                return;
+-            }
+-            const tempDir = path.join(os.homedir(), 'AppData', 'Roaming', 'VibeTools', 'temp');
+-            if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+-            const tempPath = path.join(tempDir, 'ffmpeg_' + Date.now() + '.wav');
+-            
+-            let filters = [];
+-            if (this.reverseCheck && this.reverseCheck.checked) {
+-                filters.push('areverse');
+-            }
+-            if (this.pitch !== 1.0) {
+-                // Use rubberband for mathematically perfect pitch shift without tempo change
+-                filters.push(`rubberband=pitch=${this.pitch}`);
+-            }
+-            
+-            const filterStr = filters.length > 0 ? `-af "${filters.join(',')}"` : '';
+-            let cmd = `"${ffmpegExe}" -y -i "${this.asset.path}" ${filterStr} "${tempPath}"`;
+-
+-            addLog('Running FFmpeg: ' + cmd, 'info');
+-            this.ffmpegProcess = exec(cmd, (err) => {
+-                this.isProcessing = false;
+-                this.ffmpegProcess = null;
+-                if (err) {
+-                    if (err.killed) {
+-                        addLog('FFmpeg killed (slider moved)', 'info');
+-                    } else {
+-                        addLog('FFmpeg error: ' + err, 'error');
+-                    }
+-                    resolvePromise(null);
+-                } else {
+-                    addLog('FFmpeg complete: ' + tempPath, 'info');
+-                    this.processedAudioPath = tempPath;
+-                    resolvePromise(tempPath);
+-                }
+-            });
+-        }, 300); // 300ms debounce
+-    }
++    // Export is explicit in Montazhopa; changing a preview never starts a process.
++    scheduleFFmpegProcessing: function () { this.processedAudioPath = null; }
++
+ };
+ 
+ /**
+@@ -721,4 +665,6 @@
+     drawWaveform();
+ }
+ 
+-export { AudioPreview, generateWaveform, setupStaticWaveform };
++window.MZVibeAudio = { AudioPreview, generateWaveform, setupStaticWaveform };
++
++}());

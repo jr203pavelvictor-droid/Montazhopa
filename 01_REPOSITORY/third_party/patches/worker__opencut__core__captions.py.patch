@@ -1,0 +1,100 @@
+--- opencut/core/captions.py
++++ worker/opencut/core/captions.py
+@@ -755,86 +755,8 @@
+     """Transcribe using faster-whisper (CTranslate2 backend)."""
+     from faster_whisper import WhisperModel
+ 
+-    # Check for forced CPU mode from settings
+-    force_cpu = False
+-    try:
+-        settings_file = os.path.join(os.path.expanduser("~"), ".opencut", "whisper_settings.json")
+-        if os.path.exists(settings_file):
+-            import json as _json
+-            with open(settings_file, "r", encoding="utf-8") as f:
+-                settings = _json.load(f)
+-                force_cpu = settings.get("cpu_mode", False)
+-    except Exception:
+-        pass
+-
+-    # Determine device and compute type
+-    if force_cpu:
+-        logger.debug("CPU mode enabled via settings - skipping GPU")
+-        device = "cpu"
+-        compute_type = "int8"
+-    else:
+-        # Try to detect best device - GPU with fallback to CPU
+-        device = "cuda"
+-        compute_type = "auto"
+-
+-        # Check if CUDA is actually available
+-        try:
+-            import torch
+-            if not torch.cuda.is_available():
+-                logger.debug("CUDA not available, using CPU")
+-                device = "cpu"
+-                compute_type = "int8"
+-        except ImportError:
+-            # No torch, let faster-whisper decide but be ready to fall back
+-            pass
+-
+-    # Try to load model with auto-repair on corrupt cache
+-    model = None
+-    max_attempts = 3
+-    for attempt in range(max_attempts):
+-        try:
+-            logger.debug(f"Loading Whisper model '{config.model}' on {device} (attempt {attempt + 1}/{max_attempts})")
+-            model = WhisperModel(config.model, device=device, compute_type=compute_type)
+-            break
+-        except RuntimeError as e:
+-            err_str = str(e).lower()
+-            # CUDA library errors - fall back to CPU
+-            if "cuda" in err_str or "cublas" in err_str or "cudnn" in err_str:
+-                logger.warning(f"CUDA error, falling back to CPU: {e}")
+-                device = "cpu"
+-                compute_type = "int8"
+-                model = WhisperModel(config.model, device=device, compute_type=compute_type)
+-                break
+-            # Corrupt model cache - clear, re-download, and retry
+-            elif ("unable to open file" in err_str or "model.bin" in err_str
+-                  or "corrupt" in err_str or "invalid" in err_str
+-                  or "no such file" in err_str or "not found" in err_str):
+-                if attempt < max_attempts - 1:
+-                    logger.warning(f"Model cache appears corrupt (attempt {attempt + 1}), purging and re-downloading: {e}")
+-                    _clear_model_cache(config.model)
+-                    _download_model(config.model)
+-                    continue
+-                else:
+-                    raise RuntimeError(
+-                        f"Model '{config.model}' failed to load after {max_attempts} attempts. "
+-                        f"Please check your internet connection and disk space, then try again. Error: {e}"
+-                    )
+-            else:
+-                raise
+-        except Exception as e:
+-            err_str = str(e).lower()
+-            if ("unable to open file" in err_str or "model.bin" in err_str
+-                or "corrupt" in err_str or "no such file" in err_str
+-                or "not found" in err_str):
+-                if attempt < max_attempts - 1:
+-                    logger.warning(f"Model cache error (attempt {attempt + 1}), purging and re-downloading: {e}")
+-                    _clear_model_cache(config.model)
+-                    _download_model(config.model)
+-                    continue
+-                else:
+-                    raise
+-            else:
+-                raise
++    # Montazhopa: local model only, portable CPU backend, no cache deletion/download.
++    model = WhisperModel(config.model, device="cpu", compute_type="int8", local_files_only=True)
+ 
+     task = "translate" if config.translate else "transcribe"
+ 
+@@ -855,7 +777,7 @@
+         except RuntimeError as e:
+             if "cuda" in str(e).lower() or "cublas" in str(e).lower() or "cudnn" in str(e).lower():
+                 logger.warning(f"CUDA error during transcription, retrying with CPU: {e}")
+-                model = WhisperModel(config.model, device="cpu", compute_type="int8")
++                model = WhisperModel(config.model, device="cpu", compute_type="int8", local_files_only=True)
+                 result_segments, info = model.transcribe(
+                     wav_path,
+                     language=config.language,
