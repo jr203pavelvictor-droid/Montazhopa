@@ -25,7 +25,7 @@
       } else if(raw) writing=true; // Unknown future schema must never be overwritten by this version.
     } catch(e) { writing=true; }
   }
-  function key() { const s=U.state;return s.query.trim()?'search':s.screen+':'+s.section+':'+(s.screen==='catalog'?s.category:s.screen==='detail'?s.selected:''); }
+  function key() { const s=U.state;return !U.$('search-wrap').hidden?'search':s.screen+':'+s.section+':'+(s.screen==='catalog'?s.category:s.screen==='detail'?s.selected:''); }
   function beforeRender() { if(activeKey)data.scroll[activeKey]=U.$('main').scrollTop;const context=U.state.section+':'+U.state.screen;if(previousContext&&previousContext!==context){const p=window.MZVibeAudio&&window.MZVibeAudio.AudioPreview;if(p&&p.el)p.hide();}previousContext=context; }
   function capture() {
     const s=U.state;
