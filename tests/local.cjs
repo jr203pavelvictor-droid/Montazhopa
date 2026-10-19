@@ -10,7 +10,7 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'local.js'),'utf8'),context);c
  await assert.rejects(L.checkRepository('owner/repo',false),/MZ_NETWORK_DISABLED/);assert.equal(requests,0);checks++;console.log('PASS Disabled online checks make zero requests');
  const watched=path.join(temp,'watched');fs.mkdirSync(watched);fs.writeFileSync(path.join(watched,'old.wav'),'old');L.addWatch(watched,'Bin',false);fs.writeFileSync(path.join(watched,'new.wav'),'new');let imported=[];await L.scanWatches(async p=>{imported.push(...p);return true;});assert.equal(imported.length,0);await L.scanWatches(async p=>{imported.push(...p);return true;});assert.equal(imported.length,1);assert(imported[0].endsWith('new.wav'));await L.scanWatches(async p=>{imported.push(...p);return true;});assert.equal(imported.length,1);checks++;console.log('PASS Watch folders skip existing media and wait for stable new files');
  const target=path.join(temp,'extensions','com.victor.motionviewer');fs.mkdirSync(target,{recursive:true});fs.writeFileSync(path.join(target,'keep.txt'),'old panel');
- cp.execFileSync('python3',['-c',`import zipfile,json,hashlib,pathlib
+ cp.execFileSync(process.env.MZ_PYTHON||(process.platform==='win32'?'python':'python3'),['-c',`import zipfile,json,hashlib,pathlib
 p=pathlib.Path(${JSON.stringify(temp)})
 files={'CSXS/manifest.xml':b'<ExtensionManifest ExtensionBundleId="com.victor.motionviewer" ExtensionBundleVersion="3.0.0"/>','index.html':b'<html>new</html>'}
 manifest={'format':'montazhopa-update','schemaVersion':1,'bundleId':'com.victor.motionviewer','version':'3.0.0-beta.2','files':{k:hashlib.sha256(v).hexdigest() for k,v in files.items()}}

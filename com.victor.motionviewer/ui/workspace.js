@@ -45,6 +45,7 @@
     document.title='ALTO 4.0 · '+U.$('context-label').textContent;
     U.$('main').setAttribute('aria-label',U.$('context-label').textContent);
     for(const b of U.$('navigation').querySelectorAll('button'))b.setAttribute('aria-current',b.classList.contains('active')?'page':'false');
+    if(window.AltoShell)window.AltoShell.refresh(U,A);
     capture();persist(); // Commit navigation before returning; only continuous input/scroll is debounced.
   }
   function remember(id) { data.recent=[id].concat(data.recent.filter(x=>x!==id)).slice(0,12);schedule(); }
@@ -81,16 +82,16 @@
   }
   function heading(ru,en) {const h=U.el('div','row');h.append(U.el('h3','',U.t(ru,en)));return h;}
   function home() {
-    const m=U.$('main'),hero=U.el('section','home-hero');
-    hero.append(U.el('p','eyebrow','ALTO / WORKSPACE'),U.el('h2','',U.t('Меньше действий. Больше монтажа.','Less friction. More editing.')),U.el('p','',U.t('Движение, материалы и инструменты — под рукой.','Motion, media and your everyday tools, within reach.')));
-    const quick=U.el('div','quick-actions');
-    for(const [ru,en,fn]of [['Движение','Motion',()=>A.navigate('motion')],['Motion Zoom','Motion Zoom',()=>A.openTool('camera')],['Добавить файлы','Add files',()=>U.$('asset-files').click()]])quick.append(U.button(U.t(ru,en),fn));hero.append(quick);m.append(hero);
-    const all=items(),columns=U.el('div','home-columns'),pinned=U.el('section','home-section'),recent=U.el('section','home-section');
-    const ph=heading('Быстрый доступ','Quick access');ph.append(U.button(U.t('Все инструменты','All tools'),()=>A.navigate('tools'),'reference-link'));pinned.append(ph);
+    const m=U.$('main'),hero=U.el('section','home-hero'),logo=U.el('img','hero-logo');logo.src='assets/brand/alto-symbol.svg';logo.alt='ALTO';
+    const title=U.el('h2');title.append(document.createTextNode(U.t('Движение.','Motion.')),U.el('br'),document.createTextNode(U.t('В одно касание.','At your fingertips.')));
+    hero.append(logo,U.el('p','eyebrow',U.t('ВАШЕ РАБОЧЕЕ ПРОСТРАНСТВО','YOUR CREATIVE SPACE')),title,U.el('p','',U.t('Анимация, звук и монтаж.','Motion, sound and editing.')),U.button(U.t('Открыть анимации  →','Explore animations  →'),()=>A.navigate('motion'),'primary'));m.append(hero);
+    const quick=U.el('section','home-quick');quick.append(U.el('h3','',U.t('Быстрые инструменты','Quick tools')));const grid=U.el('div','home-quick-grid');
+    for(const [id,name,en,desc,enDesc,glyph]of [['camera','Motion Zoom','Motion Zoom','Ракурсный зум','Camera movement','camera'],['cut','Убрать тишину','Remove pauses','Черновой монтаж','Rough cut','beat'],['captions','Субтитры и повторы','Captions and retakes','Речь → SRT','Speech → SRT','native'],['sync','Синхронизация звука','Audio alignment','Две записи · один сдвиг','Two recordings · one offset','sound']]){const button=U.button('',()=>{if(id==='camera')A.openTool('camera');else{A.navigate('tools');A.openWorkflow(id);}});button.innerHTML=A.svg(glyph);button.append(U.el('strong','',U.t(name,en)),U.el('small','',U.t(desc,enDesc)));grid.append(button);}quick.append(grid);m.append(quick);
+    const all=items(),columns=U.el('div','home-columns'),pinned=U.el('section','home-section'),recent=U.el('details','home-section home-recent');
+    const ph=heading('Избранное','Favorites');ph.append(U.button(U.t('Все инструменты','All tools'),()=>A.navigate('tools'),'reference-link'));pinned.append(ph);
     const picks=data.pins.map(id=>all.find(x=>x.id===id)).filter(Boolean).concat(all.filter(x=>x.type!=='tool'&&x.type!=='macro'&&isPinned(x)));for(const x of picks.slice(0,8))pinned.append(row(x));
-    if(!picks.length){for(const id of ['tool:cut','tool:captions','tool:sync']){const x=all.find(x=>x.id===id);if(x)pinned.append(row(x));}pinned.append(U.el('p','help-text',U.t('Нажми звезду, чтобы закрепить свою команду.','Star a command to pin it here.')));}
-    recent.append(heading('Недавно открытые','Recently opened'));for(const id of data.recent.slice(0,6)){const x=all.find(x=>x.id===id);if(x)recent.append(row(x));}
-    if(recent.children.length===1)recent.append(U.el('div','empty',U.t('Здесь появятся открытые пресеты и команды.','Presets and commands you open will appear here.')));
+    if(!picks.length)pinned.append(U.el('p','help-text',U.t('Отметь звёздочкой анимацию или команду.','Star an animation or command.')));
+    recent.append(U.el('summary','',U.t('Недавно открытые','Recently opened')));for(const id of data.recent.slice(0,6)){const x=all.find(x=>x.id===id);if(x)recent.append(row(x));}if(recent.children.length===1)recent.append(U.el('p','help-text',U.t('Здесь появятся открытые команды.','Opened commands will appear here.')));
     columns.append(pinned,recent);m.append(columns);
   }
   function search(favorites) {

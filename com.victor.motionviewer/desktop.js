@@ -20,23 +20,25 @@
   if(fs.existsSync(venv))return {file:venv,args:[]};
   return {file:process.platform==='win32'?'py':'python3',args:process.platform==='win32'?['-3']:[]};
  }
- let running=false;
+ let running=false,cancelActive=null;
+ api.cancelWorker=()=>{if(cancelActive)cancelActive();};
  api.runWorker=request=>new Promise((resolve,reject)=>{
   if(running)return reject(Error('Local analysis is already running'));
   running=true;
   const c=api.config(),exe=executable(),env=Object.assign({},process.env,{PYTHONIOENCODING:'utf-8',PYTHONDONTWRITEBYTECODE:'1',MZ_DATA_DIR:L.root(),HF_HUB_DISABLE_TELEMETRY:'1'});
   if(c.ffmpeg)env.MZ_FFMPEG=c.ffmpeg;
   if(c.ffprobe)env.MZ_FFPROBE=c.ffprobe;
-  let child,stdout='',stderr='',finished=false;
-  const end=(err,result)=>{if(finished)return;finished=true;running=false;clearTimeout(timer);if(err)reject(err);else resolve(result);};
+  let child,stdout='',stderr='',finished=false,cancelled=false;
+  const end=(err,result)=>{if(finished)return;finished=true;running=false;cancelActive=null;clearTimeout(timer);if(err)reject(err);else resolve(result);};
   let timer;
-  try{child=cp.spawn(exe.file,exe.args.concat([path.join(panelRoot(),'worker','main.py')]),{env,windowsHide:true,stdio:['pipe','pipe','pipe']});}catch(e){running=false;return reject(e);}
+  try{child=cp.spawn(exe.file,exe.args.concat([path.join(panelRoot(),'worker','main.py')]),{env,windowsHide:true,detached:process.platform!=='win32',stdio:['pipe','pipe','pipe']});}catch(e){running=false;return reject(e);}
+  cancelActive=()=>{cancelled=true;if(process.platform==='win32'&&child.pid){const killer=cp.spawn('taskkill.exe',['/pid',String(child.pid),'/t','/f'],{windowsHide:true,stdio:'ignore'});killer.on('error',()=>child.kill());}else{try{process.kill(-child.pid,'SIGTERM');}catch(e){child.kill();}}};
   timer=setTimeout(()=>{child.kill();end(Error('Local analysis timed out (30 minutes)'));},1800000);
   child.stdout.setEncoding('utf8');child.stderr.setEncoding('utf8');
   child.stdout.on('data',b=>{stdout+=b.toString();if(stdout.length>16*1024*1024){child.kill();end(Error('Analysis result is too large'));}});
   child.stderr.on('data',b=>{stderr=(stderr+b.toString()).slice(-6000);});
   child.on('error',e=>end(Error('Python could not start. Open Local tools and set Python 3.11+: '+e.message)));
-  child.on('close',code=>{if(finished)return;try{const out=JSON.parse(stdout);if(!out.ok)throw Error(out.error);if(code!==0)throw Error(stderr||'Local process failed');end(null,out.result);}catch(e){end(Error(e.message+(stderr?'\n'+stderr:'')));}});
+  child.on('close',code=>{if(finished)return;if(cancelled){end(Error('Cancelled'));return;}try{const out=JSON.parse(stdout);if(!out.ok)throw Error(out.error);if(code!==0)throw Error(stderr||'Local process failed');end(null,out.result);}catch(e){end(Error(e.message+(stderr?'\n'+stderr:'')));}});
   child.stdin.on('error',()=>{});child.stdin.end(JSON.stringify(request));
  });
  api.exportPreview=async()=>{

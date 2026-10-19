@@ -49,7 +49,16 @@ class WorkerTests(unittest.TestCase):
             r=run({'op':'silence','path':str(media),'threshold':-35,'minPause':.3,'padding':0})
             self.assertEqual(len(r['segments']),2)
             self.assertAlmostEqual(r['segments'][0]['start'],.5,places=2)
-            out=run({'op':'xml','path':str(media),'segments':r['segments']})
+            original=media.read_bytes()
+            padded=run({'op':'silence','path':str(media),'threshold':-35,'minPause':.3,
+                        'paddingBefore':.07,'paddingAfter':.19})
+            self.assertAlmostEqual(padded['segments'][0]['start'],.43,places=2)
+            self.assertAlmostEqual(padded['segments'][0]['end'],1.69,places=2)
+            preview=run({'op':'preview_audio','path':str(media)})
+            with wave.open(preview['path'],'rb') as w:
+                self.assertAlmostEqual(w.getnframes()/w.getframerate(),4,places=2)
+            self.assertEqual(media.read_bytes(),original)
+            out=run({'op':'xml','path':str(media),'segments':r['segments'],'source':r['source']})
             xml=ET.parse(out['path']);self.assertEqual(xml.getroot().tag,'xmeml')
             self.assertIn('%23',xml.findtext('.//pathurl'))
             self.assertTrue(xml.findall('.//clipitem'))

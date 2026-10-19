@@ -8,6 +8,7 @@
 const fs = window.MZLocal.available ? window.require('fs') : null;
 async function readAudioFile(p) {
     if (fs) {
+        if (fs.statSync(p).size > 64 * 1024 * 1024) throw Error("Preview limited to 64 MB");
         const b = fs.readFileSync(p);
         if (b.length > 64 * 1024 * 1024) throw Error('Preview limited to 64 MB');
         return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
@@ -22,23 +23,19 @@ const waveformCache = new Map(); // Cache waveform data by path
 /**
  * Generate waveform data from audio file
  */
-async function generateWaveform(audioPath, numBars = 50) {
+async function generateWaveform(audioPath, numBars = 50, decodedBuffer = null) {
+    const stamp=fs?fs.statSync(audioPath):null;
+    const cacheKey=audioPath+":"+numBars+(stamp?":"+stamp.size+":"+stamp.mtimeMs:"");
     // Check cache first
-    if (waveformCache.has(audioPath + ":" + numBars)) {
-        return waveformCache.get(audioPath + ":" + numBars);
+    if (waveformCache.has(cacheKey)) {
+        return waveformCache.get(cacheKey);
     }
 
     try {
-        if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-
-        // Read file
-        const arrayBuffer = await readAudioFile(audioPath);
-
-        // Decode audio
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        const channelData = audioBuffer.getChannelData(0);
+        if (!audioContext && !decodedBuffer) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = decodedBuffer || await audioContext.decodeAudioData(await readAudioFile(audioPath));
+        const channels=Array.from({length:audioBuffer.numberOfChannels},(_,c)=>audioBuffer.getChannelData(c));
+        const channelData=channels[0];
 
         // Calculate bars
         const samplesPerBar = Math.max(1, Math.floor(channelData.length / numBars));
@@ -49,9 +46,9 @@ async function generateWaveform(audioPath, numBars = 50) {
             let sum = 0;
             const start = i * samplesPerBar;
             for (let j = 0; j < samplesPerBar; j++) {
-                sum += Math.abs(channelData[start + j] || 0);
+                for(const channel of channels) sum += Math.abs(channel[start + j] || 0);
             }
-            const avg = sum / samplesPerBar;
+            const avg = sum / (samplesPerBar * channels.length);
             rawBars.push(avg);
             if (avg > maxBar) maxBar = avg;
         }
@@ -65,7 +62,7 @@ async function generateWaveform(audioPath, numBars = 50) {
         // Cache result
         const result = { bars, duration: audioBuffer.duration };
         if (waveformCache.size >= 8) waveformCache.delete(waveformCache.keys().next().value);
-        waveformCache.set(audioPath + ":" + numBars, result);
+        waveformCache.set(cacheKey, result);
         return result;
     } catch (err) {
         console.error('[VT] Waveform generation failed:', err);
@@ -276,7 +273,7 @@ const AudioPreview = {
         this.updateTimeDisplay();
 
         // Generate Waveform
-        const waveform = await generateWaveform(asset.path, 200);
+        const waveform = await generateWaveform(asset.path, 200, this.audioBuffer);
         if (loadToken !== this.loadToken) return;
         this.waveformData = waveform;
         this.draw();
@@ -412,6 +409,7 @@ const AudioPreview = {
     },
 
     pause: function () {
+        if (!this.isPlaying && !this.source) return;
         if (this.source) {
             this.source.onended = null;
             try { this.source.stop(); this.source.disconnect(); } catch (e) { }

@@ -4,7 +4,7 @@
     "source": "js/audioPreview.js",
     "runtime": "vendor/vibe-audio.js",
     "original_sha256": "565e5f721a6fe58e797edeaaf87da40b5f87c86afb2b28bf77c34b66e81bea9a",
-    "runtime_sha256": "55b0273b7ae03bcfdffe14172583a8009594072ed9c7ff98d30f866b6d9322b1",
+    "runtime_sha256": "97ac1fd8b42eb812460d49b15032ed3bbdb9e84968fc403f29fbceac921bfeec",
     "modified": true
   },
   {

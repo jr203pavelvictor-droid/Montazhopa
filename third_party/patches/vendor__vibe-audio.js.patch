@@ -1,6 +1,6 @@
 --- js/audioPreview.js
 +++ vendor/vibe-audio.js
-@@ -1,19 +1,21 @@
+@@ -1,46 +1,44 @@
 +(function(){
 +"use strict";
  // Audio preview subsystem: waveform generation/rendering and the AudioPreview
@@ -23,6 +23,7 @@
 +const fs = window.MZLocal.available ? window.require('fs') : null;
 +async function readAudioFile(p) {
 +    if (fs) {
++        if (fs.statSync(p).size > 64 * 1024 * 1024) throw Error("Preview limited to 64 MB");
 +        const b = fs.readFileSync(p);
 +        if (b.length > 64 * 1024 * 1024) throw Error('Preview limited to 64 MB');
 +        return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
@@ -34,28 +35,36 @@
  let audioContext = null;
  const waveformCache = new Map(); // Cache waveform data by path
  
-@@ -22,8 +24,8 @@
+ /**
+  * Generate waveform data from audio file
   */
- async function generateWaveform(audioPath, numBars = 50) {
+-async function generateWaveform(audioPath, numBars = 50) {
++async function generateWaveform(audioPath, numBars = 50, decodedBuffer = null) {
++    const stamp=fs?fs.statSync(audioPath):null;
++    const cacheKey=audioPath+":"+numBars+(stamp?":"+stamp.size+":"+stamp.mtimeMs:"");
      // Check cache first
 -    if (waveformCache.has(audioPath)) {
 -        return waveformCache.get(audioPath);
-+    if (waveformCache.has(audioPath + ":" + numBars)) {
-+        return waveformCache.get(audioPath + ":" + numBars);
++    if (waveformCache.has(cacheKey)) {
++        return waveformCache.get(cacheKey);
      }
  
      try {
-@@ -32,15 +34,14 @@
-         }
- 
-         // Read file
+-        if (!audioContext) {
+-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+-        }
+-
+-        // Read file
 -        const buffer = fs.readFileSync(audioPath);
 -        const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-+        const arrayBuffer = await readAudioFile(audioPath);
- 
-         // Decode audio
-         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-         const channelData = audioBuffer.getChannelData(0);
+-
+-        // Decode audio
+-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+-        const channelData = audioBuffer.getChannelData(0);
++        if (!audioContext && !decodedBuffer) audioContext = new (window.AudioContext || window.webkitAudioContext)();
++        const audioBuffer = decodedBuffer || await audioContext.decodeAudioData(await readAudioFile(audioPath));
++        const channels=Array.from({length:audioBuffer.numberOfChannels},(_,c)=>audioBuffer.getChannelData(c));
++        const channelData=channels[0];
  
          // Calculate bars
 -        const samplesPerBar = Math.floor(channelData.length / numBars);
@@ -63,13 +72,26 @@
          const rawBars = [];
          let maxBar = 0;
  
-@@ -63,15 +64,12 @@
+@@ -48,9 +46,9 @@
+             let sum = 0;
+             const start = i * samplesPerBar;
+             for (let j = 0; j < samplesPerBar; j++) {
+-                sum += Math.abs(channelData[start + j] || 0);
+-            }
+-            const avg = sum / samplesPerBar;
++                for(const channel of channels) sum += Math.abs(channel[start + j] || 0);
++            }
++            const avg = sum / (samplesPerBar * channels.length);
+             rawBars.push(avg);
+             if (avg > maxBar) maxBar = avg;
+         }
+@@ -63,15 +61,12 @@
  
          // Cache result
          const result = { bars, duration: audioBuffer.duration };
 -        waveformCache.set(audioPath, result);
 +        if (waveformCache.size >= 8) waveformCache.delete(waveformCache.keys().next().value);
-+        waveformCache.set(audioPath + ":" + numBars, result);
++        waveformCache.set(cacheKey, result);
          return result;
      } catch (err) {
          console.error('[VT] Waveform generation failed:', err);
@@ -82,7 +104,7 @@
      }
  }
  
-@@ -83,12 +81,11 @@
+@@ -83,12 +78,11 @@
          if (!audioContext) {
              audioContext = new (window.AudioContext || window.webkitAudioContext)();
          }
@@ -97,7 +119,7 @@
      }
  }
  
-@@ -243,6 +240,7 @@
+@@ -243,6 +237,7 @@
              return;
          }
  
@@ -105,7 +127,7 @@
          this.asset = asset;
          this.nameEl.textContent = asset.name;
          this.nameEl.title = asset.name;
-@@ -254,6 +252,7 @@
+@@ -254,6 +249,7 @@
          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
  
          // Show UI
@@ -113,7 +135,7 @@
          this.el.classList.remove('hidden');
          this.el.style.display = 'flex';
          requestAnimationFrame(() => {
-@@ -268,21 +267,30 @@
+@@ -268,21 +264,30 @@
  
          // Load Audio Buffer
          // We use a separate local load because generateWaveform might be cached without buffer.
@@ -128,7 +150,7 @@
  
          // Generate Waveform
 -        this.waveformData = await generateWaveform(asset.path, 200);
-+        const waveform = await generateWaveform(asset.path, 200);
++        const waveform = await generateWaveform(asset.path, 200, this.audioBuffer);
 +        if (loadToken !== this.loadToken) return;
 +        this.waveformData = waveform;
          this.draw();
@@ -146,7 +168,7 @@
              this.el.classList.add('hidden');
              this.el.style.display = 'none';
          }, 300);
-@@ -290,7 +298,8 @@
+@@ -290,7 +295,8 @@
  
      stop: function () {
          if (this.source) {
@@ -156,7 +178,7 @@
              this.source = null;
          }
          this.isPlaying = false;
-@@ -380,6 +389,8 @@
+@@ -380,6 +386,8 @@
          this.playbackStartTime = this.audioCtx.currentTime - offset;
          this._isReversedPlayback = isReversed;
  
@@ -165,9 +187,11 @@
          this.source.start(0, offset);
          this.isPlaying = true;
  
-@@ -402,7 +413,8 @@
+@@ -401,8 +409,10 @@
+     },
  
      pause: function () {
++        if (!this.isPlaying && !this.source) return;
          if (this.source) {
 -            try { this.source.stop(); } catch (e) { }
 +            this.source.onended = null;
@@ -175,7 +199,7 @@
              this.source = null;
          }
  
-@@ -430,7 +442,8 @@
+@@ -430,7 +440,8 @@
  
          if (this.isPlaying) {
              if (this.source) {
@@ -185,7 +209,7 @@
              }
              this.play();
          } else {
-@@ -470,7 +483,8 @@
+@@ -470,7 +481,8 @@
              this.lastPausePosition = Math.max(0, Math.min(this.lastPausePosition, this.audioBuffer.duration));
  
              if (this.source) {
@@ -195,7 +219,7 @@
              }
              // Invalidate reversed buffer cache when reverse state changes
              this._reversedBuffer = null;
-@@ -594,79 +608,9 @@
+@@ -594,79 +606,9 @@
          }
      },
  
@@ -278,7 +302,7 @@
  };
  
  /**
-@@ -721,4 +665,6 @@
+@@ -721,4 +663,6 @@
      drawWaveform();
  }
  

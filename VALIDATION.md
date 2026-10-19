@@ -1,3 +1,7 @@
+# ALTO 4.0.0-beta.2
+
+Актуальные результаты, уровни проверки и ограничения: [docs/ALTO_4_0_QA.md](docs/ALTO_4_0_QA.md). Живую проверку этой версии в Premiere выполняет пользователь. Ниже — исторические результаты прежних выпусков.
+
 # Frame capture tests for 3.2.0-beta.2
 
 `node tests/frame-capture.cjs`: verifies QE receipts (false/true/throw output), pending files, PNG headers and dimensions, stale sequence/playhead rejection, Unicode paths, private ticket cleanup and bounded non-symlink CEP loading.
