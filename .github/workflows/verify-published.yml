@@ -1,0 +1,27 @@
+name: Verify published ALTO
+
+on:
+  push:
+    branches: [main, codex/alto-production-update]
+    paths: ['.github/workflows/verify-published.yml', 'tests/verify-published.cjs']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-public-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download public ZIP and exercise the existing updater in private storage
+        run: node tests/verify-published.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alto-published-package-verification
+          path: dist/published/verification.json
+          if-no-files-found: error
