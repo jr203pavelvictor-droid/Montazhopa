@@ -34,7 +34,10 @@ let pw;try{pw=require(process.env.MZ_PLAYWRIGHT_MODULE||'playwright');}catch{pw=
  await page.locator('.audio-range-controls input[aria-label="Fade In"]').fill('.2');await page.locator('.audio-range-controls input[aria-label="Fade In"]').press('Tab');
  const canvas=await page.locator('#audioTimelineCanvas').boundingBox();await page.keyboard.down('Shift');await page.mouse.move(canvas.x+canvas.width*.25,canvas.y+canvas.height/2);await page.mouse.down();await page.mouse.move(canvas.x+canvas.width*.75,canvas.y+canvas.height/2,{steps:5});await page.mouse.up();await page.keyboard.up('Shift');
  const range=await page.evaluate(()=>MZVibeAudio.AudioPreview.range);assert(Math.abs(range.in-.5)<.04&&Math.abs(range.out-1.5)<.04);
- await page.locator('#audioReplayBtn').click();assert(await page.evaluate(()=>MZVibeAudio.AudioPreview.isPlaying));await page.waitForFunction(()=>!MZVibeAudio.AudioPreview.isPlaying);const stopped=await page.evaluate(()=>MZVibeAudio.AudioPreview.lastPausePosition);assert(Math.abs(stopped-1.5)<.04);
+ await page.locator('#audioReplayBtn').click();assert(await page.evaluate(()=>MZVibeAudio.AudioPreview.isPlaying));
+ // Playwright 1.51 waitForFunction uses eval in Chromium 134; keep panel CSP intact.
+ for(let attempt=0;attempt<100&&await page.evaluate(()=>MZVibeAudio.AudioPreview.isPlaying);attempt++)await page.waitForTimeout(50);
+ assert.equal(await page.evaluate(()=>MZVibeAudio.AudioPreview.isPlaying),false);const stopped=await page.evaluate(()=>MZVibeAudio.AudioPreview.lastPausePosition);assert(Math.abs(stopped-1.5)<.04);
  await page.screenshot({path:path.join(output,'alto-audio-excerpt-420.png')});
  await page.locator('#audioPreviewClose').click();assert.equal(f.mutations(),before,'Preview and range editing must never write to Premiere');
  assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,'ui-verification.json'),JSON.stringify({audit,errors,scope:'Actual Chromium DOM + mocked Premiere host; no live Premiere render'},null,2));await browser.close();console.log('PASS approved shell: 16 real screenshots, visible Apply, all legacy sections, flight independence, point drag/order, duplicate/delete, RU/EN, real Web Audio range audition.');
