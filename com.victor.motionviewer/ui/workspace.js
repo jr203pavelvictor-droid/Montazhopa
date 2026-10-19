@@ -86,7 +86,7 @@
     for(const [ru,en,fn]of [['Движение','Motion',()=>A.navigate('motion')],['Motion Zoom','Motion Zoom',()=>A.openTool('camera')],['Добавить файлы','Add files',()=>U.$('asset-files').click()]])quick.append(U.button(U.t(ru,en),fn));hero.append(quick);m.append(hero);
     const all=items(),columns=U.el('div','home-columns'),pinned=U.el('section','home-section'),recent=U.el('section','home-section');
     const ph=heading('Быстрый доступ','Quick access');ph.append(U.button(U.t('Все инструменты','All tools'),()=>A.navigate('tools'),'reference-link'));pinned.append(ph);
-    const picks=all.filter(isPinned);for(const x of picks.slice(0,8))pinned.append(row(x));
+    const picks=data.pins.map(id=>all.find(x=>x.id===id)).filter(Boolean).concat(all.filter(x=>x.type!=='tool'&&x.type!=='macro'&&isPinned(x)));for(const x of picks.slice(0,8))pinned.append(row(x));
     if(!picks.length){for(const id of ['tool:cut','tool:captions','tool:sync']){const x=all.find(x=>x.id===id);if(x)pinned.append(row(x));}pinned.append(U.el('p','help-text',U.t('Нажми звезду, чтобы закрепить свою команду.','Star a command to pin it here.')));}
     recent.append(heading('Недавно открытые','Recently opened'));for(const id of data.recent.slice(0,6)){const x=all.find(x=>x.id===id);if(x)recent.append(row(x));}
     if(recent.children.length===1)recent.append(U.el('div','empty',U.t('Здесь появятся открытые пресеты и команды.','Presets and commands you open will appear here.')));
