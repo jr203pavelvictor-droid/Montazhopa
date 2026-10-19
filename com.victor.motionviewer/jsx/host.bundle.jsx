@@ -878,7 +878,7 @@ var AltoTimeline=(function(){
   for(f=0;f<=route.frames;f++){var t=f/fps,value=0;for(i=0;i<events.length;i++){var e=events[i],v=0;if(t>=e.start&&t<=e.end){if(t<e.peak)v=e.strength*(t-e.start)/(e.peak-e.start);else if(t<=e.returnAt)v=e.strength;else v=e.strength*(e.end-t)/(e.end-e.returnAt);}value=Math.max(value,v);}keys.push([f/fps,value]);}
   return {keys:keys,events:events,duration:duration};
  }
- function audio(o,duration){var a=n(o.in,0,duration,'audio In'),b=n(o.out,0,duration,'audio Out');if(b-a<.001)throw Error('Audio Out must follow In');var fi=n(o.fadeIn||0,0,b-a,'fade-in'),fo=n(o.fadeOut||0,0,b-a,'fade-out');if(fi+fo>b-a+1e-8)throw Error('Audio fades overlap');return {in:a,out:b,fadeIn:fi,fadeOut:fo,duration:b-a};}
+ function audio(o,duration){var a=n(o['in'],0,duration,'audio In'),b=n(o.out,0,duration,'audio Out');if(b-a<.001)throw Error('Audio Out must follow In');var fi=n(o.fadeIn||0,0,b-a,'fade-in'),fo=n(o.fadeOut||0,0,b-a,'fade-out');if(fi+fo>b-a+1e-8)throw Error('Audio fades overlap');return {'in':a,out:b,fadeIn:fi,fadeOut:fo,duration:b-a};}
  function removals(speech,duration){var out=[],cursor=0;for(var i=0;i<speech.length;i++){var a=n(speech[i].start,0,duration,'speech start'),b=n(speech[i].end,0,duration,'speech end');if(a<cursor||b<=a)throw Error('Invalid speech intervals');if(a>cursor)out.push({start:cursor,end:a,remove:true});cursor=b;}if(cursor<duration)out.push({start:cursor,end:duration,remove:true});return out;}
  function retained(cuts,duration){var out=[],cursor=0;for(var i=0;i<cuts.length;i++){var c=cuts[i];if(!c.remove)continue;if(c.start<cursor||c.end<=c.start||c.end>duration)throw Error('Invalid silence intervals');if(c.start>cursor)out.push({start:cursor,end:c.start});cursor=c.end;}if(cursor<duration)out.push({start:cursor,end:duration});return out;}
  return {number:n,copy:copy,freezeTransitions:freezeTransitions,reorder:reorder,duplicate:duplicate,focus:focus,audio:audio,removals:removals,retained:retained};
@@ -887,7 +887,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=AltoTimeline;
 
 
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'4.0.0-beta.2',memory:{}};
+var MZ={version:'4.0.0-beta.3',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};

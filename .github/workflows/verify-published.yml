@@ -1,9 +1,6 @@
 name: Verify published ALTO
 
 on:
-  push:
-    branches: [main, codex/alto-production-update]
-    paths: ['.github/workflows/verify-published.yml', 'tests/verify-published.cjs']
   workflow_dispatch:
 
 permissions:
