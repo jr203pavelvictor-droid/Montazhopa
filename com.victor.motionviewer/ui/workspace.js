@@ -44,7 +44,7 @@
     document.title='ALTO 4.0 · '+U.$('context-label').textContent;
     U.$('main').setAttribute('aria-label',U.$('context-label').textContent);
     for(const b of U.$('navigation').querySelectorAll('button'))b.setAttribute('aria-current',b.classList.contains('active')?'page':'false');
-    capture();
+    capture();persist(); // Commit navigation before returning; only continuous input/scroll is debounced.
   }
   function remember(id) { data.recent=[id].concat(data.recent.filter(x=>x!==id)).slice(0,12);schedule(); }
   function isPinned(item) { return item.type==='tool'||item.type==='macro'?data.pins.includes(item.id):U.preferences.favorites.includes(item.sourceID); }
