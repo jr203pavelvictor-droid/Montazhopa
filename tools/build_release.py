@@ -29,7 +29,7 @@ def build():
     dist=ROOT/'dist';dist.mkdir(exist_ok=True)
     package={f'{bundle}/{name}':(panel/name).read_bytes() for name in files}
     package['update-manifest.json']=(json.dumps({'format':'montazhopa-update','schemaVersion':1,'bundleId':bundle,'version':version,'files':files},indent=2)+'\n').encode()
-    for name in ['INSTALL_WINDOWS.cmd','INSTALL_WINDOWS.ps1','INSTALL_MAC.command','SETUP_LOCAL_TOOLS_WINDOWS.cmd','SETUP_LOCAL_TOOLS_MAC.command','START_HERE_RU.md','GITHUB_RU.md','VALIDATION.md','LOCAL_TOOLS_RU.md','THIRD_PARTY_NOTICES.md','CHANGELOG.md','FEATURES.md','LICENSE','version.json','tools/setup_local.py','docs/ITERATION_1_RU.md']:
+    for name in ['INSTALL_WINDOWS.cmd','INSTALL_WINDOWS.ps1','INSTALL_MAC.command','SETUP_LOCAL_TOOLS_WINDOWS.cmd','SETUP_LOCAL_TOOLS_MAC.command','START_HERE_RU.md','GITHUB_RU.md','VALIDATION.md','LOCAL_TOOLS_RU.md','THIRD_PARTY_NOTICES.md','CHANGELOG.md','FEATURES.md','LICENSE','version.json','tools/setup_local.py','docs/ITERATION_1_RU.md','docs/ALTO_4_0_CHANGELOG.md','docs/ALTO_4_0_BRAND.md','docs/ALTO_4_0_QA.md','docs/ALTO_4_0_MASTER_PLAN_RU.md']:
         package[name]=(ROOT/name).read_bytes()
     package['checksums.sha256']=''.join(f'{digest}  {bundle}/{name}\n' for name,digest in files.items()).encode()
     out=dist/('Montazhopa_'+version+'.zip')

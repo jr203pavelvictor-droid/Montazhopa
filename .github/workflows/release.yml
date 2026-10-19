@@ -63,7 +63,9 @@ jobs:
       - name: Verify interface and previews
         env:
           MZ_QA_DIR: test-results/ui
-        run: node tests/ui.cjs
+        run: |
+          node tests/ui.cjs
+          node tests/alto-ui.cjs
       - name: Save interface previews
         uses: actions/upload-artifact@v4
         with:

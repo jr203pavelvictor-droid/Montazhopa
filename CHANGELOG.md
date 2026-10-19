@@ -1,3 +1,7 @@
+# ALTO 4.0.0-dev.1 — 2026-10-19
+
+Рабочая ветка без публикации: [дизайн, UX и сохранение совместимости](docs/ALTO_4_0_CHANGELOG.md). Публичное имя ALTO; прежние технические ID и обновлятор сохранены.
+
 # 3.2.0-beta.2 — 2026-10-19
 
 - Motion Zoom: «Взять кадр с таймлайна» captures the active sequence at the playhead and loads the image automatically.

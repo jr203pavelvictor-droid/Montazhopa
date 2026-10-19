@@ -1,0 +1,78 @@
+/* Flex grids retain a fallback for CEP Chromium without min()/aspect-ratio. */
+#main { padding: 18px 16px 26px; }
+.grid, .grid.small, .grid.large { display: flex; flex-wrap: wrap; gap: 12px; }
+.grid>.card { flex: 1 1 155px; min-width: 0; max-width: calc(50% - 6px); }
+.grid.small>.card { flex-basis: 120px; }
+.grid.large>.card { flex-basis: 210px; max-width: 100%; }
+.grid.list>.card { max-width: 100%; flex: none; width: 100%; }
+.grid>.empty { width: 100%; }
+.section-heading>div:first-child { min-width: 0; }
+.detail-layout>*, .camera-layout>*, .tool-row>span, .button-row>*, .panel { min-width: 0; }
+.settings-content { max-width: 760px; }
+.button-row>button { overflow-wrap: anywhere; }
+@media (min-width:650px) {
+  .topbar { margin: 12px 18px 0; padding: 12px 18px; }
+  .navigation { margin-left: 18px; margin-right: 18px; }
+  .navigation button { flex: 1 1 0; max-width: 160px; }
+  .search-wrap { margin-left: 18px; margin-right: 18px; }
+  .context-bar { padding-left: 24px; }
+  #main { padding: 20px 24px 32px; }
+  .grid>.card { max-width: calc(33.333% - 8px); }
+  .grid.small>.card { max-width: calc(25% - 9px); }
+  .grid.large>.card { max-width: calc(50% - 6px); }
+  .detail-layout,.camera-layout { display: flex; gap: 20px; align-items: flex-start; }
+  .detail-layout>*,.camera-layout>* { flex: 1; width: 0; }
+  .detail-visual { position: sticky; top: 0; }
+  .home-columns { display: flex; gap: 20px; align-items: flex-start; }
+  .home-columns>.home-section { flex: 1; min-width: 0; }
+}
+@media (min-width:900px) { .grid>.card { max-width: calc(25% - 9px); } }
+@media (max-width:399px) {
+  .navigation { gap: 2px; }
+  .navigation button { flex-direction: column; gap: 3px; padding: 6px 2px; font-size: 8px; min-height: 44px; }
+  .navigation svg { width: 15px; height: 15px; }
+  .topbar { margin: 8px 10px 0; padding: 10px 12px; height: 60px; min-height: 60px; }
+  .navigation { margin: 8px 10px 0; }
+  .wordmark { gap: 7px; }
+  .wordmark>span:last-child { font-size: 19px; }
+  .wordmark small { font-size: 7px; }
+  .header-actions { gap: 3px; }
+  .header-actions .icon { width: 28px; height: 28px; min-width: 28px; }
+  #main { padding: 16px 12px 24px; }
+  h2 { font-size: 19px; }
+  .grid>.card,.grid.small>.card { flex-basis: 100%; max-width: 100%; }
+  .grid:not(.large):not(.list) .card { display: flex; align-items: stretch; min-height: 84px; }
+  .grid:not(.large):not(.list) .thumb { width: 100px; min-height: 84px; aspect-ratio: auto; flex-shrink: 0; }
+  .grid:not(.large):not(.list) .card-caption { padding: 14px 32px 14px 12px; justify-content: center; }
+  .grid .card .fav:not(.saved) { opacity: 1; }
+  .grid:not(.large):not(.list) .sample-tile { width: 52px; font-size: 21px; }
+  .grid:not(.large):not(.list) .sample-type { font-size: 23px; }
+  .grid .asset-card { display: block; }
+  .grid .asset-card .thumb { width: 100%; height: 100px; }
+  .section-heading { gap: 6px; }
+  .view-actions { padding: 2px; }
+  .view-actions .icon { width: 23px; min-width: 23px; height: 25px; }
+  .panel { padding: 13px; }
+  .home-hero { padding: 18px; }
+  .two { gap: 8px; }
+  .direction-caption { font-size: 8px; }
+  .audio-preview { left: 8px; right: 8px; padding: 11px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *,*:before,*:after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .card:hover { transform: none; }
+}
+.motion-off .card,.motion-off button,.motion-off .audio-preview { transition: none; }
+.motion-off .card:hover { transform: none; }
+/* The HTML hidden attribute must win over component display rules. */
+[hidden] { display: none !important; }
+@media (min-width:400px) and (max-width:599px) {
+  .navigation button { flex-direction: column; gap: 4px; padding: 7px 2px; font-size: 9px; min-height: 48px; }
+  .navigation svg { width: 16px; height: 16px; }
+}
+
+@media (max-width:349px) {
+  .navigation .nav-label { display: none; }
+  .navigation button { flex-direction: row; min-height: 36px; }
+  .navigation svg { width: 17px; height: 17px; }
+}

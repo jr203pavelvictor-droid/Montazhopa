@@ -1,0 +1,22 @@
+/* ALTO Graphite Glass. Local fonts; no runtime network dependency. */
+:root {
+  color-scheme: dark;
+  --bg: #0b0b0d;
+  --panel: #18191d;
+  --card: #232429;
+  --ink: #f1f2f4;
+  --muted: #a9abb3;
+  --silver: #e3e5e9;
+  --rim: rgba(224,227,234,.13);
+  --surface: rgba(45,47,54,.68);
+  --surface-hover: rgba(65,67,75,.78);
+  --focus: rgba(242,244,247,.65);
+  --radius: 18px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 24px;
+  --font: Montserrat, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --glass-blur: 20px;
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --duration: 160ms;
+}

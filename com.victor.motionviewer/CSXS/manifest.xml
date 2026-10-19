@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.victor.motionviewer" ExtensionBundleVersion="3.2.0" ExtensionBundleName="Montazhopa">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.victor.motionviewer" ExtensionBundleVersion="4.0.0" ExtensionBundleName="ALTO">
  <ExtensionList>
-  <Extension Id="com.victor.motionviewer.panel" Version="3.2.0" />
+  <Extension Id="com.victor.motionviewer.panel" Version="4.0.0" />
  </ExtensionList>
  <ExecutionEnvironment>
   <HostList>
@@ -27,7 +27,7 @@
     </Lifecycle>
     <UI>
      <Type>Panel</Type>
-     <Menu>Montazhopa</Menu>
+     <Menu>ALTO</Menu>
      <Geometry>
       <Size>
        <Height>620</Height>

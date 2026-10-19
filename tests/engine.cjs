@@ -11,3 +11,17 @@ const linear=E.build('photo',{easing:'linear',pan:0},25,12);assert.equal(linear.
 const photo=E.sample('photo',{reverse:true,easing:'linear'},0);assert.equal(photo.scale,112);assert.equal(E.sample('photo',{reverse:true,easing:'linear'},1).scale,100);
 const route=E.camera([{fx:.5,fy:.5,scale:100,hold:.6},{fx:.3,fy:.4,scale:200,hold:.6}],{mode:'linear',move:.5,settle:.2,overshoot:0,protect:true,fitFrames:100},25);assert(route.keys.length<=4);assert.equal(route.frames,100);
 console.log(JSON.stringify({checked,maxError,linearKeys:linear.scale.length,cameraKeys:route.keys.length,status:'PASS'}));
+// Motion Zoom Ease Out must reach the target with a decreasing velocity.
+for(let i=0;i<=100;i++){
+ const u=i/100,out=ctx.MZMotion.ease(u,{mode:'easeOut'}),mirror=1-ctx.MZMotion.ease(1-u,{mode:'easeIn'});
+ assert(Math.abs(out-mirror)<1e-12);if(i>0)assert(out>=ctx.MZMotion.ease((i-1)/100,{mode:'easeOut'}));
+}
+for(const fps of [23.976,25,29.97,60]){
+ const stops=[{fx:.5,fy:.5,scale:100,hold:0},{fx:.7,fy:.6,scale:180,hold:0}];
+ const opts={mode:'easeOut',move:1,settle:.2,overshoot:0,protect:false};
+ const route=E.camera(stops,opts,fps),n=route.frames;
+ const start=ctx.MZMotion.sample(route,0),mid=ctx.MZMotion.sample(route,n/2),end=ctx.MZMotion.sample(route,n);
+ assert.equal(start.scale,100);assert.equal(end.scale,180);assert(mid.scale>165&&mid.scale<175);
+ assert(Math.abs((mid.scale-start.scale)/(end.scale-start.scale)-.875)<.01);
+}
+console.log('PASS Motion Zoom Ease Out: mirror symmetry, monotonicity, endpoints and route sampling at four frame rates');

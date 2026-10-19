@@ -1,3 +1,7 @@
+# ALTO 4.0: Montserrat font
+
+Copyright 2024 The Montserrat.Git Project Authors (https://github.com/JulietaUla/Montserrat.git). SIL Open Font License 1.1, full text in `com.victor.motionviewer/assets/fonts/OFL.txt`. Local static WOFF subsets (400/500/600/700) and outlined wordmark derived from Google Fonts Montserrat. See [brand notes](docs/ALTO_4_0_BRAND.md) for source hash and changes.
+
 # Third-party source integrated into Montazhopa 3.1.0-beta.1
 
 Montazhopa is a CEP panel with its own UI, host bridge, data storage, watcher and installer. It incorporates the following licensed source modules. Repository source snapshots and modifications are retained in `third_party/upstream-snapshots.zip`, `third_party/patches`, `third_party/integrated-files.json` and `third_party/sources-lock.json` in the source distribution.

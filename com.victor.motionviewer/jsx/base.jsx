@@ -89,6 +89,7 @@ var MZMotion = (function () {
         if(mode==='hold')return u<1?0:1;
         if(mode==='snap'||mode==='spring')return 1-Math.pow(1-u,4);
         if(mode==='easeIn')return u*u*u;
+        if(mode==='easeOut')return 1-Math.pow(1-u,3);
         if(mode==='bezier')return bezier(u,o.x1,o.y1,o.x2,o.y2);
         return u*u*u*(u*(u*6-15)+10);
     }
@@ -96,7 +97,7 @@ var MZMotion = (function () {
         var o={},k;for(k in base)if(base.hasOwnProperty(k))o[k]=base[k];
         if(override)for(k in override)if(override.hasOwnProperty(k))o[k]=override[k];
         o.mode=o.mode||'spring';
-        if(!/^(smooth|snap|spring|linear|hold|bezier|easeIn)$/.test(o.mode))throw new Error('Неизвестная кривая.');
+        if(!/^(smooth|snap|spring|linear|hold|bezier|easeIn|easeOut)$/.test(o.mode))throw new Error('Неизвестная кривая.');
         o.move=number(o.move,0.08,5,'длительность перехода');o.settle=number(o.settle,0.08,3,'время успокоения');
         o.overshoot=number(o.overshoot,0,0.6,'сила пружины');
         o.cycles=number(typeof o.cycles==='undefined'?1:o.cycles,0.5,4,'колебания');
