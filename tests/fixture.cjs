@@ -44,6 +44,20 @@ function fixture(clips=[clip('Photo',12,3)],options={}){
  if(options.ambiguous)qitems.push(qitems[qitems.length-1]);
  const qseq={getVideoTrackAt:i=>({numItems:qitems.length,getItemAt:j=>qitems[j]})};
  const context={Time,app:{version:'25.5.0',project:{activeSequence:sequence},enableQE(){}},qe:{project:{getActiveSequence:()=>qseq,getVideoEffectByName:name=>name==='AE.ADBE Geometry2'||name==='AE.ADBE Drop Shadow'?{matchName:name}:null}}};
+ // The real CEP ExtendScript runtime exposes File() and $.evalFile().
+ // Simulate only the loader here so host.jsx can execute its companion module
+ // without changing production code or relying on a real Premiere process.
+ function TestFile(filePath){
+  if(!(this instanceof TestFile))return new TestFile(filePath);
+  this.fsName=String(filePath);
+  this.parent={fsName:path.dirname(this.fsName)};
+ }
+ context.File=TestFile;
+ context.$={
+  fileName:path.join(root,'jsx/host.jsx'),
+  os:process.platform==='win32'?'Windows':'Macintosh',
+  evalFile(file){vm.runInContext(fs.readFileSync(file.fsName,'utf8'),context,{filename:file.fsName});}
+ };
  vm.createContext(context);vm.runInContext(host,context);
  return {ctx:context,clips,mutations:()=>mutations,apply:key=>JSON.parse(context.VMV.applyById(key)),selection:()=>JSON.parse(context.VMV.selectionInfo())};
 }

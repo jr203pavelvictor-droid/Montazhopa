@@ -1,0 +1,98 @@
+name: Build and publish Montazhopa
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish new GitHub Release (only from main, after review)'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check version, tag and source branch
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(python -c 'import json; print(json.load(open("version.json", encoding="utf-8"))["version"])')"
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "Tag must match version.json: expected v$VERSION, got $GITHUB_REF_NAME"
+            exit 1
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "$GITHUB_REF" != refs/heads/main ]]; then
+            echo "Manual releases must run from main."
+            exit 1
+          fi
+      - name: Run regression tests
+        run: |
+          node tests/engine.cjs
+          node tests/host.cjs
+          node tests/local.cjs
+          node tests/core.test.cjs
+          node --test tests/upstream/syncitol.test.cjs
+          python -m unittest discover -s tests -p 'test_*.py'
+      - name: Build release assets
+        run: python tools/build_release.py
+      - name: Validate release checksum
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json, zipfile
+          version=json.loads(Path("version.json").read_text())["version"]
+          archive=Path("dist")/f"Montazhopa_{version}.zip"
+          assert archive.exists()
+          expected=archive.with_suffix(".zip.sha256").read_text().split()[0]
+          assert hashlib.sha256(archive.read_bytes()).hexdigest()==expected
+          with zipfile.ZipFile(archive) as z: assert z.testzip() is None
+          print("Verified ZIP and SHA-256:", archive)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: montazhopa-release-preview
+          path: |
+            dist/Montazhopa_*.zip
+            dist/Montazhopa_*.zip.sha256
+          if-no-files-found: error
+      - name: Ensure this release does not already exist
+        if: github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists; bump version.json instead of overwriting."
+            exit 1
+          fi
+      - name: Publish new release after successful tests
+        if: github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          PRERELEASE=()
+          if [[ "$VERSION" == *-* ]]; then PRERELEASE=(--prerelease); fi
+          TARGET=()
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then TARGET=(--verify-tag); else TARGET=(--target "$GITHUB_SHA"); fi
+          gh release create "v$VERSION"             "dist/Montazhopa_$VERSION.zip"             "dist/Montazhopa_$VERSION.zip.sha256"             --title "Montazhopa $VERSION" --generate-notes             "${PRERELEASE[@]}" "${TARGET[@]}"

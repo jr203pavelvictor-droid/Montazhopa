@@ -12,7 +12,7 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'local.js'),'utf8'),context);c
  cp.execFileSync('python3',['-c',`import zipfile,json,hashlib,pathlib
 p=pathlib.Path(${JSON.stringify(temp)})
 files={'CSXS/manifest.xml':b'<ExtensionManifest ExtensionBundleId="com.victor.motionviewer" ExtensionBundleVersion="3.0.0"/>','index.html':b'<html>new</html>'}
-manifest={'bundleId':'com.victor.motionviewer','version':'3.0.0-beta.2','files':{k:hashlib.sha256(v).hexdigest() for k,v in files.items()}}
+manifest={'format':'montazhopa-update','schemaVersion':1,'bundleId':'com.victor.motionviewer','version':'3.0.0-beta.2','files':{k:hashlib.sha256(v).hexdigest() for k,v in files.items()}}
 for kind in ['valid','traversal','missing','corrupt']:
  with zipfile.ZipFile(p/(kind+'.zip'),'w',zipfile.ZIP_DEFLATED) as z:
   z.writestr('Montazhopa/update-manifest.json',json.dumps(manifest))
