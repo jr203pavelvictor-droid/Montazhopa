@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-window.MZ_VERSION='4.0.0-beta.3';
+window.MZ_VERSION='4.0.0-beta.4';
 const $=id=>document.getElementById(id),L=window.MZLocal,C=window.MZCatalog;
 const defaults={lang:'ru',hover:true,motion:true,transparency:true,network:false,prereleases:true,repo:'jr203pavelvictor-droid/Montazhopa',views:{},size:{},favorites:[],videoTrack:1,audioTrack:1};
 let preferences;try{preferences=Object.assign({},defaults,JSON.parse(localStorage.getItem('mz3.preferences')||'{}'));}catch(e){preferences=Object.assign({},defaults);}
@@ -184,5 +184,5 @@ window.addEventListener('resize',()=>{drawDetail();drawCamera();drawWaveform();}
 window.MZDebug={state,preferences,getCamera:()=>({stops:cameraStops,options:cameraOptions,route:state.cameraRoute}),host,estimateBPM,findSilence,render};
 window.MZUI={$,t,el,button,field,selectField,panel,backButton,topHeading,modal,closeModal,host,operation,error,status,render,preferences,state};window.MZPlus.init(window.MZUI);
 W.init(window.MZUI,{svg,icon,navigate,openTool,toolDefaults,openWorkflow,favorite,playAudio,createMacro,reviewMacro,tools:toolDefinitions,camera:()=>({stops:cameraStops,options:cameraOptions}),restoreCamera:c=>{try{if(Array.isArray(c.stops)&&c.stops.length>=2&&c.stops.length<=10){MZEngine.camera(c.stops,c.options,25);cameraStops=c.stops;cameraOptions=Object.assign(cameraOptions,c.options);state.cameraIndex=Math.max(0,Math.min(cameraStops.length-1,Number(c.index)||0));}}catch(e){}}});
-savePreferences();render();if(window.__adobe_cep__){status('Подключаю команды Premiere…','Connecting Premiere commands…');window.MZBridge.ensure().then(r=>{$('host-dot').classList.add('connected');status('Premiere · JSX '+r.version+' · готово','Premiere · JSX '+r.version+' · ready');}).catch(error);}else status('Автономный просмотр · применение внутри Premiere','Standalone preview · apply inside Premiere');requestAnimationFrame(tick);
+savePreferences();render();if(window.AltoStartup)window.AltoStartup.ready();if(window.__adobe_cep__){status('Подключаю команды Premiere…','Connecting Premiere commands…');window.MZBridge.ensure().then(r=>{$('host-dot').classList.add('connected');status('Premiere · JSX '+r.version+' · готово','Premiere · JSX '+r.version+' · ready');}).catch(error);}else status('Автономный просмотр · применение внутри Premiere','Standalone preview · apply inside Premiere');requestAnimationFrame(tick);
 }());

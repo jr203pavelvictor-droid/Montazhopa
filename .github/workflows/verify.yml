@@ -33,6 +33,7 @@ jobs:
           node tests/local.cjs
           node tests/core.test.cjs
           node tests/production-update.cjs
+          node tests/cep-startup.cjs
           node --test tests/upstream/syncitol.test.cjs
       - name: Run Python worker tests
         run: |

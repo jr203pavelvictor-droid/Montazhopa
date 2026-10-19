@@ -16,7 +16,10 @@
   }if(onProgress)onProgress(end/frames);await new Promise(resolve=>setTimeout(resolve,0));}
   return out;
  }
- if(typeof module!=='undefined'&&module.exports){module.exports={encode};return;}
+ // CEP --mixed-context exposes CommonJS AND window to the same script tag.
+ // Keep the Node encoder export without skipping the renderer registration.
+ if(typeof module!=='undefined'&&module.exports)module.exports={encode};
+ if(typeof window==='undefined')return;
  window.AltoAudio={init(U,player){
   const {el,button,t}=U,container=el('div','audio-range-controls'),fields={},range={in:0,out:0,fadeIn:0,fadeOut:0};let cancelled=false,working=false;
   for(const [key,label]of [['in','In'],['out','Out'],['fadeIn','Fade In'],['fadeOut','Fade Out']]){const wrap=el('label','audio-range-field'),input=el('input');input.type='number';input.min=0;input.step=.01;input.value=0;input.setAttribute('aria-label',label);wrap.append(el('span','',label),input);fields[key]=input;input.onchange=()=>{if(!player.audioBuffer)return;try{const next=Object.assign({},range,{[key]:Number(input.value)});AltoTimeline.audio(next,player.audioBuffer.duration);Object.assign(range,next);player.pause();player.draw();}catch(e){input.value=range[key];U.error(e);}};container.append(wrap);}

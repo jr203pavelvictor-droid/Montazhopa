@@ -8,6 +8,8 @@ let pw;try{pw=require(process.env.MZ_PLAYWRIGHT_MODULE||'playwright');}catch{pw=
  let f=fixture([clip('Adjustment Layer',0,12,{adjustment:true,inPoint:0})]);page.on('pageerror',e=>errors.push(e.message));
  await page.exposeFunction('__host',script=>vm.runInContext(script,f.ctx));
  await page.addInitScript(root=>{window.__adobe_cep__={getSystemPath:()=>root,getHostEnvironment:()=>JSON.stringify({appName:'PPRO',appVersion:'26.5'}),evalScript:(s,cb)=>window.__host(s).then(cb)};localStorage.setItem('mz3.preferences',JSON.stringify({lang:'ru',favorites:['photo','pop','move'],hover:true,motion:true,network:false}));},root);
+ // Real CEP mixed-context also exposes CommonJS globals to renderer scripts.
+ await page.addInitScript(()=>{window.module={exports:{}};window.exports=window.module.exports;});
  await page.goto(pathToFileURL(path.join(root,'index.html')).href);await page.evaluate(()=>document.fonts.ready);
  async function nav(section){await page.locator('#more-toggle').click();await page.locator(`[data-section="${section}"]`).click();}
  const audit=[];

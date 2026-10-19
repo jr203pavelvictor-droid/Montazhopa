@@ -1,8 +1,8 @@
-# ALTO 4.0.0-beta.3
+# ALTO 4.0.0-beta.4
 
 CEP-панель для Premiere Pro на основе Montazhopa. Новый интерфейс следует двум пользовательским референсам: полупрозрачное графитовое стекло в духе iOS и знак A из трёх плавных металлических лент. Основной шрифт — локальный Montserrat RU/EN.
 
-[Скачать ALTO 4.0.0-beta.3](https://github.com/jr203pavelvictor-droid/Montazhopa/releases/tag/v4.0.0-beta.3) · [Изменения](docs/ALTO_4_0_CHANGELOG.md) · [Проверки и ограничения](docs/ALTO_4_0_QA.md) · [Инструкция](docs/ALTO_4_0_WORKFLOW_RU.md)
+[Скачать ALTO 4.0.0-beta.4](https://github.com/jr203pavelvictor-droid/Montazhopa/releases/tag/v4.0.0-beta.4) · [Изменения](docs/ALTO_4_0_CHANGELOG.md) · [Проверки и ограничения](docs/ALTO_4_0_QA.md) · [Инструкция](docs/ALTO_4_0_WORKFLOW_RU.md)
 
 ![ALTO / Liquid Graphite](docs/previews/alto-motion-420.png)
 

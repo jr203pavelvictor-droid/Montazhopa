@@ -55,6 +55,7 @@ jobs:
           node tests/local.cjs
           node tests/core.test.cjs
           node tests/production-update.cjs
+          node tests/cep-startup.cjs
           node --test tests/upstream/syncitol.test.cjs
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ffmpeg
