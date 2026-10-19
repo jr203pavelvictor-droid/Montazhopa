@@ -2,7 +2,7 @@
 
 Premiere Pro CEP-панель на основе Montazhopa 3.2.0-beta.2. Ветка `feature/alto-4-ui`: новый графитовый интерфейс со стеклом, локальный Montserrat и серебристый знак A из трёх восходящих уровней.
 
-**4.0.0-dev.1 — рабочая версия для ревью, не опубликованный выпуск.** `main`, теги и Releases этой работой не обновляются. Последний опубликованный выпуск: [Montazhopa 3.2.0-beta.2](https://github.com/jr203pavelvictor-droid/Montazhopa/releases/tag/v3.2.0-beta.2).
+**4.0.0-alpha.1 — рабочая версия для ревью, не опубликованный выпуск.** `main`, теги и Releases этой работой не обновляются. Последний опубликованный выпуск: [Montazhopa 3.2.0-beta.2](https://github.com/jr203pavelvictor-droid/Montazhopa/releases/tag/v3.2.0-beta.2).
 
 - [Что реализовано и что отложено](docs/ALTO_4_0_CHANGELOG.md)
 - [Визуальная система и логотип](docs/ALTO_4_0_BRAND.md)

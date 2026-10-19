@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-window.MZ_VERSION='4.0.0-dev.1';
+window.MZ_VERSION='4.0.0-alpha.1';
 const $=id=>document.getElementById(id),L=window.MZLocal,C=window.MZCatalog;
 const defaults={lang:'ru',hover:true,motion:true,transparency:true,network:false,prereleases:true,repo:'jr203pavelvictor-droid/Montazhopa',views:{},size:{},favorites:[],videoTrack:1,audioTrack:1};
 let preferences;try{preferences=Object.assign({},defaults,JSON.parse(localStorage.getItem('mz3.preferences')||'{}'));}catch(e){preferences=Object.assign({},defaults);}
