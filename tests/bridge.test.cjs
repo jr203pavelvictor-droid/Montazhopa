@@ -1,6 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const createBridge=require('../com.victor.motionviewer/host-bridge.js');
+const parseES3=require('./es3-parse.cjs');
 const panel=path.resolve(__dirname,'../com.victor.motionviewer'),bundle=fs.readFileSync(path.join(panel,'jsx/host.bundle.jsx'),'utf8');
 const version=require('../version.json').version;
 function hostFixture(options={}){
@@ -8,11 +9,15 @@ function hostFixture(options={}){
  let loads=0,evals=0,missing=!!options.missing;
  const native={console,JSON,app:{},counter:0};vm.createContext(native);
  function File(name){if(!(this instanceof File))return new File(name);this.fsName=String(name);this.exists=!missing&&this.fsName===expected;this.parent={fsName:path.posix.dirname(this.fsName)};}
- native.File=File;native.$={fileName:'/unrelated/engine.js',evalFile:file=>{assert.equal(file.fsName,expected);loads++;vm.runInContext(bundle,native,{filename:expected});}};
- const win={MZ_VERSION:version,require:name=>name==='path'?path.win32:name==='os'?{platform:()=> 'win32'}:require(name),__adobe_cep__:{getSystemPath:()=>'/'+root,evalScript:(source,cb)=>{evals++;try{cb(vm.runInContext(source,native));}catch(e){cb('evalScript error.');}}}};
+ native.File=File;native.$={fileName:'/unrelated/engine.js',evalFile:file=>{assert.equal(file.fsName,expected);loads++;parseES3(bundle);vm.runInContext(bundle,native,{filename:expected});}};
+ const win={MZ_VERSION:version,require:name=>name==='path'?path.win32:name==='os'?{platform:()=> 'win32'}:require(name),__adobe_cep__:{getSystemPath:()=>'/'+root,evalScript:(source,cb)=>{evals++;try{parseES3(source);cb(vm.runInContext(source,native));}catch(e){cb('evalScript error.');}}}};
  return {api:createBridge(win),win,native,loads:()=>loads,evals:()=>evals,setMissing:value=>missing=value};
 }
 async function run(){
+ assert.throws(()=>parseES3('var o={in:1};o.in;'),/keyword|reserved/);
+ parseES3(bundle);
+ const manifest=fs.readFileSync(path.join(panel,'CSXS/manifest.xml'),'utf8');
+ assert.match(manifest,/<ScriptPath>\.\/jsx\/host\.bundle\.jsx<\/ScriptPath>/,'CEP must load the same bundled file the bridge tests');
  assert.ok(!bundle.includes('#include '));assert.ok(!bundle.includes('$.evalFile('));
  const f=hostFixture();assert.equal(f.api.bundlePath(),"C:/Users/Виктор/O'Brien/Adobe/CEP/extensions/com.victor.motionviewer/jsx/host.bundle.jsx");
  const health=await f.api.ensure();assert.equal(health.version,version);assert.ok(health.methods.includes('MZ.projectContext'));assert.equal(f.loads(),1);

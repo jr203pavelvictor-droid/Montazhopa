@@ -127,3 +127,6 @@ jobs:
           TARGET=()
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then TARGET=(--verify-tag); else TARGET=(--target "$GITHUB_SHA"); fi
           gh release create "v$VERSION"             "dist/Montazhopa_$VERSION.zip"             "dist/Montazhopa_$VERSION.zip.sha256"             --title "ALTO $VERSION" --notes-file docs/ALTO_4_0_RELEASE_RU.md             "${PRERELEASE[@]}" "${TARGET[@]}"
+      - name: Verify the public package with the existing updater
+        if: github.ref_type == 'tag' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
+        run: node tests/verify-published.cjs

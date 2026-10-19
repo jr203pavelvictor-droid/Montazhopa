@@ -1,4 +1,4 @@
-# ALTO beta.2 — новые функции
+# ALTO beta.3 — новые функции
 
 ## Motion Zoom
 

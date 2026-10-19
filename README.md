@@ -1,8 +1,8 @@
-# ALTO 4.0.0-beta.2
+# ALTO 4.0.0-beta.3
 
 CEP-панель для Premiere Pro на основе Montazhopa. Новый интерфейс следует двум пользовательским референсам: полупрозрачное графитовое стекло в духе iOS и знак A из трёх плавных металлических лент. Основной шрифт — локальный Montserrat RU/EN.
 
-[Скачать ALTO 4.0.0-beta.2](https://github.com/jr203pavelvictor-droid/Montazhopa/releases/tag/v4.0.0-beta.2) · [Изменения](docs/ALTO_4_0_CHANGELOG.md) · [Проверки и ограничения](docs/ALTO_4_0_QA.md) · [Инструкция](docs/ALTO_4_0_WORKFLOW_RU.md)
+[Скачать ALTO 4.0.0-beta.3](https://github.com/jr203pavelvictor-droid/Montazhopa/releases/tag/v4.0.0-beta.3) · [Изменения](docs/ALTO_4_0_CHANGELOG.md) · [Проверки и ограничения](docs/ALTO_4_0_QA.md) · [Инструкция](docs/ALTO_4_0_WORKFLOW_RU.md)
 
 ![ALTO / Liquid Graphite](docs/previews/alto-motion-420.png)
 
@@ -39,4 +39,4 @@ node tests/alto-ui.cjs
 node tests/production-ui.cjs
 ```
 
-Это предварительная версия. Проверки используют настоящий HTML/CSS/Web Audio в Chromium и модель API Premiere. Живая проверка beta.2 в Premiere и нативная установка/откат macOS/Windows не выполнялись; по просьбе пользователя их выполняет он сам. Расфокус поддерживает отдельные клипы/явно подтверждённые отдельные несты объекта со скоростью 100%; общий нест не обеспечивает селективность. Подробности — в QA и инструкции.
+Это предварительная версия. Проверки используют настоящий HTML/CSS/Web Audio в Chromium и модель API Premiere. Живая проверка beta.3 в Premiere и нативная установка/откат macOS/Windows не выполнялись; по просьбе пользователя их выполняет он сам. Расфокус поддерживает отдельные клипы/явно подтверждённые отдельные несты объекта со скоростью 100%; общий нест не обеспечивает селективность. Подробности — в QA и инструкции.

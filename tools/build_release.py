@@ -23,6 +23,7 @@ def build():
     if manifest.attrib['ExtensionBundleId']!=bundle:raise ValueError('Bundle ID differs')
     if f"version:'{version}'" not in (panel/'jsx/host.jsx').read_text(encoding='utf-8-sig'):raise ValueError('JSX version differs')
     bundle_host(panel)
+    subprocess.run(['node',str(ROOT/'tests/es3-parse.cjs'),str(panel/'jsx/host.bundle.jsx')],check=True)
     for js in sorted(panel.rglob('*.js')):
         subprocess.run(['node','--check',str(js)],check=True,capture_output=True)
     files={p.relative_to(panel).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(panel.rglob('*')) if p.is_file() and '__pycache__' not in p.parts and p.suffix!='.pyc'}
