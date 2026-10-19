@@ -1,45 +1,60 @@
-/* Three surface levels. Cards are shaded glass with no per-card GPU blur. */
+/* Liquid Graphite: translucent layers over an internal light field, not over Premiere windows. */
 body {
-  background: radial-gradient(ellipse at 2% 0%, #30313780, transparent 52%),
-    radial-gradient(ellipse at 98% 70%, #22232b55, transparent 52%), var(--bg);
+  position: relative; isolation: isolate;
+  background:
+    radial-gradient(ellipse at 6% 9%,#5c648461,transparent 52%),
+    radial-gradient(ellipse at 105% 42%,#5c719752,transparent 54%),
+    radial-gradient(ellipse at 5% 102%,#30345b80,transparent 55%),
+    linear-gradient(155deg,#242a3a,#141a28 57%,#1b2030);
 }
-.topbar, .navigation, .search-wrap {
-  background: linear-gradient(145deg, #35363bba, #202126c9);
-  border: 1px solid #ffffff19;
-  box-shadow: inset 0 1px #ffffff14, 0 6px 22px #0002;
+body:before {
+  content: ''; pointer-events: none; position: fixed; inset: 0; z-index: -1;
+  background: linear-gradient(132deg,transparent 6%,#d3dfff08 6.2%,transparent 26%),
+    radial-gradient(ellipse at 82% -18%,#e4ecff2e,transparent 56%),
+    linear-gradient(20deg,transparent 30%,#46598412 45%,transparent 58%);
 }
-.card, .panel, .tool-row, .watch-row, .info-block, .home-hero, .command-row {
-  background: linear-gradient(145deg, #45464d42, #27282d52);
-  border: 1px solid var(--rim);
-  box-shadow: inset 0 1px #ffffff0b, 0 4px 12px #00000015;
+.topbar {
+  background: radial-gradient(ellipse at 17% 0,#e5e5ee12,transparent 48%),
+    linear-gradient(144deg,#373d4c6b,#11172299 54%,#353d5266);
+  border: 1px solid #e6e9f032;
+  box-shadow: inset 0 1px #ffffff48,inset 1px 0 #ffffff16,inset 0 -1px #03070e80,0 12px 26px #05081130;
 }
-.card:hover, .tool-row:hover, .command-row:hover {
-  background: linear-gradient(145deg, #55565f60, #33343b66);
-  border-color: #ffffff2e;
-  box-shadow: inset 0 1px #ffffff21, 0 8px 22px #0003;
+.navigation,.search-wrap,.playbar,.view-actions,.chips {
+  background: linear-gradient(150deg,#e0e9ff14,#62708d10 45%,#0b142435);
+  border: 1px solid #e2eaff2e;
+  box-shadow: inset 0 1px #ffffff24,inset 0 -1px #050b1859,0 6px 16px #02071126;
 }
-.modal { background: #050507b3; }
-.modal-card, .audio-preview, .tooltip {
-  background: linear-gradient(145deg, #38393ff5, #202126f5);
-  border: 1px solid #ffffff30;
-  box-shadow: inset 0 1px #ffffff2e, 0 20px 65px #0008;
+.card,.panel,.tool-row,.watch-row,.info-block,.command-row,.home-hero {
+  background: radial-gradient(ellipse at 0 0,#dde6ff12,transparent 62%),
+    linear-gradient(145deg,#a2b1d22b,#747f9b16 58%,#303b542c);
+  border: 1px solid #dae4ff2b;
+  box-shadow: inset 0 1px #ffffff30,inset 1px 0 #ffffff09,inset 0 -1px #0a102349,0 8px 20px #02071526;
+}
+.card:hover,.tool-row:hover,.command-row:hover {
+  background: radial-gradient(ellipse at 0 0,#e6ecff21,transparent 62%),linear-gradient(145deg,#a6b7df36,#70809f20);
+  border-color: #e8efff54;
+  box-shadow: inset 0 1px #ffffff54,inset 1px 0 #ffffff13,0 12px 26px #02071538;
+}
+.modal { background: #080d1a9e; }
+.modal-card,.audio-preview,.tooltip {
+  background: linear-gradient(145deg,#67728b85,#303b52c7 52%,#222d44e0);
+  border: 1px solid #ecf2ff59;
+  box-shadow: inset 0 1px #ffffff66,inset 1px 0 #ffffff14,0 24px 65px #0007;
 }
 @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
-  .topbar, .navigation, .search-wrap, .modal-card, .audio-preview, .tooltip {
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
+  .topbar,.navigation,.search-wrap,.modal-card,.audio-preview,.tooltip,.home-hero {
+    backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(120%);
   }
+  /* Only inspector groups blur. Scrolling catalogs use shaded transparency to limit GPU layers. */
+  .detail-layout .panel,.camera-layout .panel { backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px); }
 }
-.transparency-off .topbar, .transparency-off .navigation, .transparency-off .search-wrap,
-.transparency-off .modal-card, .transparency-off .audio-preview, .transparency-off .tooltip {
-  background: #222328; backdrop-filter: none; -webkit-backdrop-filter: none;
-}
-.transparency-off .card, .transparency-off .panel, .transparency-off .tool-row,
-.transparency-off .watch-row, .transparency-off .info-block, .transparency-off .command-row,
-.transparency-off .home-hero { background: #1c1d22; }
+.transparency-off .topbar,.transparency-off .navigation,.transparency-off .search-wrap,
+.transparency-off .modal-card,.transparency-off .audio-preview,.transparency-off .tooltip,
+.transparency-off .card,.transparency-off .panel,.transparency-off .tool-row,
+.transparency-off .watch-row,.transparency-off .info-block,.transparency-off .command-row,
+.transparency-off .home-hero { background:#2b3242;backdrop-filter:none;-webkit-backdrop-filter:none; }
 @media (prefers-reduced-transparency:reduce) {
-  .topbar, .navigation, .search-wrap, .card, .panel, .tool-row, .watch-row, .info-block,
-  .modal-card, .audio-preview, .tooltip, .home-hero, .command-row {
-    background: #222328; backdrop-filter: none; -webkit-backdrop-filter: none;
-  }
+  .topbar,.navigation,.search-wrap,.card,.panel,.tool-row,.watch-row,.info-block,
+  .modal-card,.audio-preview,.tooltip,.home-hero,.command-row { background:#2b3242;backdrop-filter:none;-webkit-backdrop-filter:none; }
 }

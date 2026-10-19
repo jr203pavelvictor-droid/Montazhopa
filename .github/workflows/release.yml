@@ -1,4 +1,4 @@
-name: Build and publish Montazhopa
+name: Build and publish ALTO
 
 on:
   push:
@@ -118,4 +118,4 @@ jobs:
           if [[ "$VERSION" == *-* ]]; then PRERELEASE=(--prerelease); fi
           TARGET=()
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then TARGET=(--verify-tag); else TARGET=(--target "$GITHUB_SHA"); fi
-          gh release create "v$VERSION"             "dist/Montazhopa_$VERSION.zip"             "dist/Montazhopa_$VERSION.zip.sha256"             --title "Montazhopa $VERSION" --generate-notes             "${PRERELEASE[@]}" "${TARGET[@]}"
+          gh release create "v$VERSION"             "dist/Montazhopa_$VERSION.zip"             "dist/Montazhopa_$VERSION.zip.sha256"             --title "ALTO $VERSION" --notes-file docs/ALTO_4_0_RELEASE_RU.md             "${PRERELEASE[@]}" "${TARGET[@]}"

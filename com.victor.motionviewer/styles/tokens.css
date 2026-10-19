@@ -1,22 +1,24 @@
-/* ALTO Graphite Glass. Local fonts; no runtime network dependency. */
+/* ALTO / Liquid Graphite. The reference's blue actions and green switches are semantic accents. */
 :root {
   color-scheme: dark;
-  --bg: #0b0b0d;
-  --panel: #18191d;
-  --card: #232429;
-  --ink: #f1f2f4;
-  --muted: #a9abb3;
-  --silver: #e3e5e9;
-  --rim: rgba(224,227,234,.13);
-  --surface: rgba(45,47,54,.68);
-  --surface-hover: rgba(65,67,75,.78);
-  --focus: rgba(242,244,247,.65);
-  --radius: 18px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 24px;
+  --bg: #151a26;
+  --panel: #303645;
+  --card: #353b4b;
+  --ink: #f4f5f9;
+  --muted: #b4bac9;
+  --silver: #e4e7ed;
+  --rim: rgba(226,233,255,.22);
+  --surface: rgba(67,74,95,.45);
+  --surface-hover: rgba(91,101,128,.48);
+  --focus: #96caff;
+  --accent: #0a84ff;
+  --success: #30d158;
+  --radius: 24px;
+  --r-sm: 13px;
+  --r-md: 18px;
+  --r-lg: 28px;
   --font: Montserrat, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --glass-blur: 20px;
+  --glass-blur: 26px;
   --ease: cubic-bezier(.2,.7,.2,1);
-  --duration: 160ms;
+  --duration: 180ms;
 }

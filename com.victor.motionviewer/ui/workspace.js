@@ -36,6 +36,7 @@
     schedule();
   }
   function afterRender() {
+    window.AltoSurfaces.refresh();
     activeKey=key();U.$('main').scrollTop=Number(data.scroll[activeKey])||0;
     const s=U.state;
     const names={home:U.t('Главная','Home'),motion:U.t('Движение','Motion'),assets:U.t('Библиотека','Library'),sounds:U.t('Звук','Sounds'),tools:U.t('Инструменты','Tools'),automation:U.t('Сценарии','Workflows')};

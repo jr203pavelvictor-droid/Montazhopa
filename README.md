@@ -1,23 +1,24 @@
-# ALTO 4.0 — development branch
+# ALTO 4.0.0-beta.1
 
-Premiere Pro CEP-панель на основе Montazhopa 3.2.0-beta.2. Ветка `feature/alto-4-ui`: новый графитовый интерфейс со стеклом, локальный Montserrat и серебристый знак A из трёх восходящих уровней.
+CEP-панель для Premiere Pro на основе Montazhopa. Новый интерфейс следует двум пользовательским референсам: полупрозрачное графитовое стекло в духе iOS и знак A из трёх плавных металлических лент. Основной шрифт — локальный Montserrat RU/EN.
 
-**4.0.0-alpha.1 — рабочая версия для ревью, не опубликованный выпуск.** `main`, теги и Releases этой работой не обновляются. Последний опубликованный выпуск: [Montazhopa 3.2.0-beta.2](https://github.com/jr203pavelvictor-droid/Montazhopa/releases/tag/v3.2.0-beta.2).
+[Скачать ALTO 4.0.0-beta.1](https://github.com/jr203pavelvictor-droid/Montazhopa/releases/tag/v4.0.0-beta.1) · [Изменения](docs/ALTO_4_0_CHANGELOG.md) · [Проверки и ограничения](docs/ALTO_4_0_QA.md)
 
-- [Что реализовано и что отложено](docs/ALTO_4_0_CHANGELOG.md)
-- [Визуальная система и логотип](docs/ALTO_4_0_BRAND.md)
-- [Проверки и ограничения](docs/ALTO_4_0_QA.md)
-- [Исходный план и приоритеты](docs/ALTO_4_0_MASTER_PLAN_RU.md)
-- [Существующие инструменты](FEATURES.md) · [Ограничения Premiere](docs/ITERATION_1_RU.md)
-- [Локальная обработка](LOCAL_TOOLS_RU.md) · [Лицензии](THIRD_PARTY_NOTICES.md)
+![ALTO / Liquid Graphite](docs/previews/alto-motion-420.png)
 
-![ALTO — каталог, 420 px](docs/previews/alto-motion-420.png)
+- Хромированный изогнутый знак и открытая A в надписи ALTO; SVG и app icons 16–512 px.
+- Стеклянные панели с бликами и глубиной; синие действия, зелёные переключатели, круглые кнопки и ползунки с индикацией значения.
+- Главная, поиск по разделам, закреплённые команды, недавнее и сохранение контекста.
+- Motion Zoom: Ease In / Ease Out, существующий маршрут и кнопка захвата кадра.
+- Сохранены прежние инструменты, CEP ID, настройки, избранное, библиотека, watch folders, ownership/rollback и формат обновлений.
 
-Прежние CEP ID, ключи настроек, пользовательские файлы, Project bin paths, формат пресетов и механизм обновлений сохранены. Репозиторий пока называется `Montazhopa`, публичное имя панели — **ALTO**.
+Обновление из прежней панели: Настройки → разрешить интернет и тестовые версии → Проверить → Загрузить и подготовить → Установить после закрытия Premiere. Можно также установить ZIP из Releases. Архив `Source code` не является пакетом обновления.
 
-Локальная сборка: `python3 tools/build_release.py`. Историческое имя ZIP `Montazhopa_<version>.zip` сохранено для совместимости существующего обновлятора. Команда создаёт локальный пакет и не публикует его.
+Публичное имя панели — **ALTO**. Репозиторий, `com.victor.motionviewer`, папка `Montazhopa3` и имя пакета `Montazhopa_<version>.zip` сохранены для совместимости.
 
-Проверки браузера требуют Playwright 1.51.1 (`npm install --no-save --ignore-scripts playwright@1.51.1`, `npx playwright install chromium`). Запуск:
+[Существующие инструменты](FEATURES.md) · [Ограничения Premiere](docs/ITERATION_1_RU.md) · [Локальная обработка](LOCAL_TOOLS_RU.md) · [Лицензии](THIRD_PARTY_NOTICES.md)
+
+Локальная сборка: `python3 tools/build_release.py`. Проверки браузера требуют Playwright 1.51.1.
 
 ```bash
 node tests/engine.cjs
@@ -33,4 +34,4 @@ node tests/ui.cjs
 node tests/alto-ui.cjs
 ```
 
-Тесты используют браузер и модель API Premiere. Живое применение, рендер и установка в Premiere на macOS/Windows требуют отдельной проверки перед выпуском.
+Это бета-версия. Проверки используют настоящий HTML/CSS в Chromium и модель API Premiere. Живой рендер, CEP/QE и нативная установка на macOS/Windows в этой среде не проверялись.
