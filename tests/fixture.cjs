@@ -1,6 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const path=require('path'),root=path.join(__dirname,'../com.victor.motionviewer');
-let host=fs.readFileSync(path.join(root,'jsx/host.jsx'),'utf8');for(const [needle,file] of [['base.jsx','jsx/base.jsx'],['json.jsx','jsx/json.jsx'],['../engine.js','engine.js']])host=host.replace('#include '+JSON.stringify(needle),fs.readFileSync(path.join(root,file),'utf8'));
+function expand(file){return fs.readFileSync(file,'utf8').replace(/^\s*#include\s+["']([^"']+)["']\s*$/gm,(_,name)=>expand(path.resolve(path.dirname(file),name)));}
+const host=expand(path.join(root,'jsx/host.jsx'));
 const clone=x=>x===undefined?undefined:JSON.parse(JSON.stringify(x));
 const TICKS=254016000000;
 class Time{constructor(seconds=0){this.ticks=String(Math.round(seconds*TICKS));}get seconds(){return Number(this.ticks)/TICKS;}}
@@ -8,10 +9,16 @@ function collection(array,kind='numItems'){Object.defineProperty(array,kind,{get
 class Param{
  constructor(value,options={}){this.value=clone(value);this.keys=new Map();this.interp=new Map();this.options=options;this.varying=false;this.writes=0;}
  getValue(){return clone(this.value);} getValueAtKey(t){return clone(this.keys.get(t.ticks));}
+ getValueAtTime(t){
+  if(!this.varying||!this.keys.size)return clone(this.value);
+  const times=[...this.keys.keys()].map(Number).sort((a,b)=>a-b),at=Number(t.ticks);
+  if(at<=times[0])return clone(this.keys.get(String(times[0])));if(at>=times.at(-1))return clone(this.keys.get(String(times.at(-1))));
+  for(let i=1;i<times.length;i++)if(at<=times[i]){let u=(at-times[i-1])/(times[i]-times[i-1]);if(this.interp.get(String(times[i-1]))===5&&!this.options.ignoreInterpolation)u=u*u*(3-2*u);const a=this.keys.get(String(times[i-1])),b=this.keys.get(String(times[i]));return Array.isArray(a)?a.map((v,j)=>v+(b[j]-v)*u):a+(b-a)*u;}
+ }
  areKeyframesSupported(){return true;} isTimeVarying(){return this.varying;}
  setTimeVarying(v){this.varying=v;if(v)this.keys.set(new Time(99).ticks,clone(this.value));return 0;}
  getKeys(){return [...this.keys.keys()].map(t=>{const time=new Time();time.ticks=t;return time;});}
- removeKey(t){this.keys.delete(t.ticks);return 0;}
+ removeKey(t){this.keys.delete(t.ticks);this.interp.delete(t.ticks);return 0;}
  addKey(t){if(this.options.failKey)throw Error('Injected keyframe failure');this.keys.set(t.ticks,clone(this.value));return 0;}
  setValueAtKey(t,v){this.keys.set(t.ticks,clone(v));this.writes++;return 0;}
  setInterpolationTypeAtKey(t,v){this.interp.set(t.ticks,v);return 0;}
@@ -19,16 +26,17 @@ class Param{
  setColorValue(...v){this.value=v.slice(0,4);this.writes++;return 0;}
 }
 function component(match,options={}){
+ if(match==='AE.ADBE Motion')return {matchName:match,properties:collection([new Param([.5,.5]),new Param(100),new Param(100),new Param(true),new Param(0),new Param([.5,.5])])};
  if(match==='AE.ADBE Geometry2'){
   const point=options.pixelPoints?[2000,1500]:[.5,.5];
-  return {matchName:match,properties:collection([new Param(point),new Param(point),new Param(true),new Param(100,{failKey:options.failKey}),new Param(100),new Param(0),new Param(0),new Param(0),new Param(100),new Param(true),new Param(0),new Param(0)])};
+  return {matchName:match,properties:collection([new Param(point,options),new Param(point,options),new Param(true),new Param(100,options),new Param(100),new Param(0),new Param(0),new Param(0),new Param(100),new Param(true),new Param(0),new Param(0)])};
  }
  if(match==='AE.ADBE Drop Shadow')return {matchName:match,properties:collection([new Param([255,0,0,0]),new Param(options.shadowUI?50:127.5),new Param(135),new Param(5),new Param(0),new Param(false)])};
  return {matchName:match,properties:collection([new Param([.47,.52]),new Param(38),new Param(7)])};
 }
 function clip(name,start,duration,options={}){
  const sourceIn=options.inPoint??3600,rate=options.rate??1;
- return {nodeId:name+'_'+start,name,start:new Time(start),end:new Time(start+duration),inPoint:new Time(sourceIn),outPoint:new Time(sourceIn+duration*rate),components:collection([component('AE.ADBE Motion'),component('AE.ADBE Opacity'),component('EXISTING_CUSTOM')]),isSelected:()=>options.selected!==false,isSpeedReversed:()=>!!options.reverse,isAdjustmentLayer:()=>!!options.adjustment};
+ return {nodeId:name+'_'+start,name,start:new Time(start),end:new Time(start+duration),inPoint:new Time(sourceIn),outPoint:new Time(sourceIn+duration*rate),components:collection([component('AE.ADBE Motion'),component('AE.ADBE Opacity'),component('EXISTING_CUSTOM')]),isSelected:()=>options.selected!==false,isSpeedReversed:()=>!!options.reverse,projectItem:{getProjectMetadata:()=>'<premiere:Column.Intrinsic.VideoInfo>'+ (options.sourceWidth||1920)+' x '+(options.sourceHeight||1080)+'</premiere:Column.Intrinsic.VideoInfo>',getFootageInterpretation:()=>({pixelAspectRatio:1})},isAdjustmentLayer:()=>!!options.adjustment};
 }
 function fixture(clips=[clip('Photo',12,3)],options={}){
  let mutations=0;

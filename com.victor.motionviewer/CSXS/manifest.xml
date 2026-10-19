@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.victor.motionviewer" ExtensionBundleVersion="3.1.0" ExtensionBundleName="Montazhopa">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.victor.motionviewer" ExtensionBundleVersion="3.2.0" ExtensionBundleName="Montazhopa">
  <ExtensionList>
-  <Extension Id="com.victor.motionviewer.panel" Version="3.1.0" />
+  <Extension Id="com.victor.motionviewer.panel" Version="3.2.0" />
  </ExtensionList>
  <ExecutionEnvironment>
   <HostList>

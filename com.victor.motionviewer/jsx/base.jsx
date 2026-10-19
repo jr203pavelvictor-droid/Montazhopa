@@ -250,6 +250,7 @@ VMV.time = function (seconds) {
     return t;
 };
 VMV.checkResult = function (result, action) {
+    if (result === false) throw new Error(action + ': Premiere отказал в операции');
     if (typeof result === 'number' && result !== 0) throw new Error(action + ': код ' + result);
 };
 VMV.getTargets = function (seq) {
@@ -388,10 +389,10 @@ VMV.interpolate = function (points, t, fallback) {
     return points[points.length-1][1];
 };
 VMV.closeValue = function (actual, expected) {
-    if (expected instanceof Array) {
-        return actual && actual.length === expected.length &&
-            Math.abs(Number(actual[0]) - expected[0]) < 0.0001 &&
-            Math.abs(Number(actual[1]) - expected[1]) < 0.0001;
+    if (Object.prototype.toString.call(expected)==='[object Array]') {
+        if (!actual || actual.length!==expected.length) return false;
+        for(var i=0;i<expected.length;i++)if(!VMV.closeValue(actual[i],expected[i]))return false;
+        return true;
     }
     return Math.abs(Number(actual) - Number(expected)) < 0.001;
 };
@@ -411,6 +412,9 @@ VMV.writeKeys = function (param, entries, plan) {
         VMV.checkResult(param.addKey(time), 'Добавление ключа');
         VMV.checkResult(param.setValueAtKey(time, entries[i][1], true), 'Запись ключа ' + (i+1));
         VMV.checkResult(param.setInterpolationTypeAtKey(time, plan.interpolation || 0, true), 'Интерполяция ключа');
+        var written = param.getKeys(), found = false;
+        if (written) for (var w=0;w<written.length;w++) if (String(written[w].ticks)===String(time.ticks)) found=true;
+        if (!found || !VMV.closeValue(param.getValueAtKey(time),entries[i][1])) throw new Error('Premiere не подтвердил ключ '+(i+1)+': '+param.displayName);
         if (i === 0) firstTime = time;
         lastTime = time;
     }
@@ -430,6 +434,31 @@ VMV.writeKeys = function (param, entries, plan) {
         }
     }
     plan.verifiedKeys=(plan.verifiedKeys||0)+entries.length;
+    if (plan.interpolation===5 && entries.length===2) VMV.verifyBezier(param,entries,plan);
+};
+VMV.verifyBezier = function(param,entries,plan) {
+    // НЕ ПОДДЕРЖИВАЕТСЯ: чтение interpolation enum и управление Bezier handles.
+    // Read the actual curve instead; a silently linear result is not success.
+    if (typeof param.getValueAtTime!=='function') throw Error('MZ_BEZIER_VERIFY_UNAVAILABLE');
+    var a=entries[0][1],b=entries[1][1],vector=a instanceof Array,changed=false;
+    var aa=vector?a:[a],bb=vector?b:[b];
+    var fractions=[.125,.25,.5,.75,.875],values=[];
+    for(var i=0;i<fractions.length;i++){
+        var at=plan.sourceIn+(entries[0][0]+(entries[1][0]-entries[0][0])*fractions[i])*plan.sourceRate;
+        var value=param.getValueAtTime(VMV.time(at));values.push(vector?value:[value]);
+    }
+    for(var axis=0;axis<aa.length;axis++){
+        var delta=bb[axis]-aa[axis];if(Math.abs(delta)<.00000001)continue;changed=true;
+        var previous=0;
+        for(i=0;i<fractions.length;i++){
+            var p=(Number(values[i][axis])-aa[axis])/delta;
+            if(!isFinite(p)||p<previous-.0001||p<-.0001||p>1.0001)throw Error('MZ_BEZIER_UNSAFE');
+            previous=p;
+        }
+        var early=(values[0][axis]-aa[axis])/delta,late=(values[4][axis]-aa[axis])/delta;
+        if(early>=.115||late<=.885)throw Error('MZ_BEZIER_NOT_SMOOTH');
+    }
+    if(!changed)throw Error('MZ_BEZIER_NOT_SMOOTH');
 };
 VMV.makePlan = function (seq, target, spec) {
     var clip = VMV.publicClip(seq, target);
@@ -478,9 +507,9 @@ VMV.configureTransform = function (component, spec, plan) {
     VMV.setStatic(compShutter,false); VMV.setStatic(shutter,typeof spec.shutter==='number'?spec.shutter:180);
     if(!VMV.closeValue(shutter.getValue(),typeof spec.shutter==='number'?spec.shutter:180)) throw new Error('Premiere не подтвердил Shutter Angle.');
     VMV.setStatic(uniform,!(spec.sx || spec.sy));
-    if (spec.sy || spec.scale) VMV.writeKeys(height,VMV.entries(spec.sy || spec.scale,plan),plan);
+    if (spec.sy || spec.scale) VMV.writeOrStatic(height,VMV.entries(spec.sy || spec.scale,plan),plan);
     // With uniform scaling enabled, the height/Scale parameter drives both axes.
-    if (spec.sx || spec.sy) VMV.writeKeys(width,VMV.entries(spec.sx || spec.scale,plan),plan);
+    if (spec.sx || spec.sy) VMV.writeOrStatic(width,VMV.entries(spec.sx || spec.scale,plan),plan);
     if (spec.rotation) VMV.writeKeys(rotation,VMV.entries(spec.rotation,plan),plan);
     if (spec.opacity) VMV.writeKeys(opacity,VMV.entries(spec.opacity,plan),plan);
     if (spec.x || spec.y) {
@@ -500,6 +529,18 @@ VMV.configureTransform = function (component, spec, plan) {
             Number(p[0]) + VMV.interpolate(spec.x,moments[i],0) * unitsX,
             Number(p[1]) + VMV.interpolate(spec.y,moments[i],0) * unitsY]]);
         VMV.writeKeys(position,VMV.entries(positions,plan),plan);
+    }
+    if (spec.protection) VMV.verifyCoverage(component,spec,plan,unitsX,unitsY,p);
+};
+VMV.writeOrStatic=function(param,entries,plan){var equal=true;for(var i=1;i<entries.length;i++)if(!VMV.closeValue(entries[i][1],entries[0][1]))equal=false;if(equal){VMV.setStatic(param,entries[0][1]);if(!VMV.closeValue(param.getValue(),entries[0][1]))throw Error('Static scale not confirmed');}else VMV.writeKeys(param,entries,plan);};
+VMV.verifyCoverage=function(comp,spec,plan,ux,uy,position){
+    var pos=comp.properties[1],scale=comp.properties[3],frames=Math.ceil(spec.duration/plan.frame),g=spec.protection;
+    if(typeof pos.getValueAtTime!=='function'||typeof scale.getValueAtTime!=='function')throw Error('MZ_EDGE_READ_UNAVAILABLE');
+    // Check each sequence frame and half-frame (Bezier can bend between keys).
+    for(var f=0;f<=frames*2;f++){
+        var seconds=plan.sourceIn+(plan.offset+Math.min(spec.duration,f*plan.frame/2))*plan.sourceRate,time=VMV.time(seconds);
+        var p=pos.isTimeVarying()?pos.getValueAtTime(time):pos.getValue(),s=scale.isTimeVarying()?scale.getValueAtTime(time):scale.getValue();
+        if(!MZEngine.covers(g,(p[0]-position[0])/ux,(p[1]-position[1])/uy,Number(s)))throw Error('MZ_EDGE_NOT_COVERED');
     }
 };
 VMV.configureShadow = function (component, layer) {

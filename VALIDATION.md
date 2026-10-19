@@ -1,3 +1,13 @@
+# Validation for 3.2.0-beta.1
+
+- `node tests/iteration1.cjs`: native endpoint key counts, all eight directions with every-frame coverage at 60 fps, portrait geometry, unsupported Motion preflight, ignored-Bezier rejection, shared-cut OUT/IN timing, invalid-selection rejection and rollback across two clips.
+- Existing engine, host, bridge, local/updater, original Syncitol and Python worker tests are retained.
+- `tools/build_release.py` bundles JSX, enforces matching app/host/CEP versions, builds a deterministic update archive and SHA-256. CI runs these tests before publication.
+- Tests using the Premiere DOM are simulations. No live Premiere installation or Windows/macOS installer execution is available in this environment.
+- Browser UI verification status is recorded in the iteration test output / CI, separate from host simulation and real Premiere render validation.
+
+---
+
 # Проверки 3.1.0-beta.1
 
 Проверено 18 октября 2026 в Linux-среде разработки. Результаты относятся к указанным уровням проверки.

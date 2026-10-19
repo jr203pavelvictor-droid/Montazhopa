@@ -3,6 +3,8 @@ name: Build and publish Montazhopa
 on:
   push:
     tags: ['v*']
+    branches: [main]
+    paths: ['version.json']
   workflow_dispatch:
     inputs:
       publish_release:
@@ -41,14 +43,32 @@ jobs:
             echo "Manual releases must run from main."
             exit 1
           fi
+      - name: Bundle JSX before bridge tests
+        run: python tools/bundle_host.py
       - name: Run regression tests
         run: |
           node tests/engine.cjs
           node tests/host.cjs
+          node tests/iteration1.cjs
+          node tests/bridge.test.cjs
           node tests/local.cjs
           node tests/core.test.cjs
           node --test tests/upstream/syncitol.test.cjs
           python -m unittest discover -s tests -p 'test_*.py'
+      - name: Install browser test dependencies
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.51.1
+          npx playwright install --with-deps chromium
+      - name: Verify interface and previews
+        env:
+          MZ_QA_DIR: test-results/ui
+        run: node tests/ui.cjs
+      - name: Save interface previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: montazhopa-ui-previews
+          path: test-results/ui/*.png
+          if-no-files-found: error
       - name: Build release assets
         run: python tools/build_release.py
       - name: Validate release checksum
@@ -73,7 +93,7 @@ jobs:
             dist/Montazhopa_*.zip.sha256
           if-no-files-found: error
       - name: Ensure this release does not already exist
-        if: github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
+        if: github.ref_type == 'tag' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -84,7 +104,7 @@ jobs:
             exit 1
           fi
       - name: Publish new release after successful tests
-        if: github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
+        if: github.ref_type == 'tag' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

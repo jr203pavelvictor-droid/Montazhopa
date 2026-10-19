@@ -1,3 +1,13 @@
+# 3.2.0-beta.1 — 2026-10-19
+
+- Two native position keys for Move, verified Bezier/readback and transactional paired transitions.
+- Eight directions; default edge protection with per-frame readback and conservative geometry checks.
+- Animation, Transitions, Effects and Motion Zoom categories; category-aware custom preset import.
+- Plain wordmark, new timeline/peach SVG mark, MOVE preview text, single-player audio hover.
+- Retains beta 2 absolute-path bundled JSX bootstrap and adds its regression tests to CI.
+- Version bumps on main now build and publish a new release only after regression and package checks.
+- See [iteration notes and limitations](docs/ITERATION_1_RU.md). Premiere render validation remains pending.
+
 # Montazhopa 3.1.0-beta.1
 
 - Больше стекла: прозрачные поверхности, светлые грани, blur, контрастный фон и светлая активная вкладка. Привычная структура сохранена.

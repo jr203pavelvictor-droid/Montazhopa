@@ -21,15 +21,33 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Bundle JSX before bridge tests
+        run: python tools/bundle_host.py
       - name: Run JavaScript and Premiere-host simulation tests
         run: |
           node tests/engine.cjs
           node tests/host.cjs
+          node tests/iteration1.cjs
+          node tests/bridge.test.cjs
           node tests/local.cjs
           node tests/core.test.cjs
           node --test tests/upstream/syncitol.test.cjs
       - name: Run Python worker tests
         run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Install browser test dependencies
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.51.1
+          npx playwright install --with-deps chromium
+      - name: Verify interface and previews
+        env:
+          MZ_QA_DIR: test-results/ui
+        run: node tests/ui.cjs
+      - name: Save interface previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: montazhopa-ui-previews
+          path: test-results/ui/*.png
+          if-no-files-found: error
       - name: Build and verify release ZIP
         run: |
           python tools/build_release.py

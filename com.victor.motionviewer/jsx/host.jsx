@@ -2,47 +2,78 @@
 #include "json.jsx"
 #include "../engine.js"
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'3.1.0-beta.1',memory:{}};
+var MZ={version:'3.2.0-beta.1',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};
 MZ.load=function(){var key=MZ.projectKey();if(MZ.memory[key])return MZ.memory[key];var data={};if(app.project.path){var f=MZ.storeFile();if(f.exists){f.encoding='UTF-8';if(!f.open('r'))throw Error('Cannot read ownership');var text=f.read();f.close();if(text.length>6000000)throw Error('Ownership file too large');data=MZJSON.parse(text);}}MZ.memory[key]=data;return data;};
 MZ.persist=function(data){if(!app.project.path){MZ.memory[MZ.projectKey()]=data;return;}var f=MZ.storeFile(),originalName=f.name,tmp=new File(f.fsName+'.tmp');tmp.encoding='UTF-8';if(!tmp.open('w'))throw Error('Cannot save ownership');var ok=tmp.write(VMV.encode(data));tmp.close();if(!ok)throw Error('Cannot save ownership');var backup=new File(f.fsName+'.previous');if(backup.exists)backup.remove();if(f.exists&&!f.rename(f.name+'.previous'))throw Error('Cannot back up ownership');if(!tmp.rename(originalName)){if(backup.exists)backup.rename(originalName);throw Error('Cannot commit ownership');}if(backup.exists)backup.remove();MZ.memory[MZ.projectKey()]=data;};
 MZ.key=function(seq,target){return String(seq.sequenceID)+'/'+target.nodeId;};
-MZ.snapshot=function(comp){var out=[];for(var i=0;i<comp.properties.numItems;i++){var p=comp.properties[i],r={value:p.getValue(),varying:false,keys:[]};if(comp.matchName==='AE.ADBE Drop Shadow'&&i===0&&p.getColorValue){try{r.color=p.getColorValue();}catch(colorError){}}try{r.varying=p.isTimeVarying();var keys=p.areKeyframesSupported()?p.getKeys():null;if(keys)for(var j=0;j<keys.length;j++){var interp=0;try{if(p.getInterpolationTypeAtKey)interp=p.getInterpolationTypeAtKey(keys[j]);}catch(ignore){}r.keys.push([String(keys[j].ticks),p.getValueAtKey(keys[j]),interp]);}}catch(ignore2){}out.push(r);}return out;};
-MZ.restore=function(comp,snapshot){for(var i=0;i<snapshot.length;i++){var p=comp.properties[i],s=snapshot[i];try{if(p.areKeyframesSupported()){var keys=p.getKeys();if(keys)for(var j=keys.length-1;j>=0;j--)VMV.checkResult(p.removeKey(keys[j]),'Restore key');VMV.checkResult(p.setTimeVarying(false),'Restore animation');}if(s.color&&p.setColorValue)VMV.checkResult(p.setColorValue(s.color[0],s.color[1],s.color[2],s.color[3],true),'Restore color');else VMV.setStatic(p,s.value);if(s.varying&&s.keys.length){VMV.checkResult(p.setTimeVarying(true),'Restore animation');var automatic=p.getKeys();if(automatic)for(var a=automatic.length-1;a>=0;a--)p.removeKey(automatic[a]);for(var k=0;k<s.keys.length;k++){var t=new Time();t.ticks=s.keys[k][0];VMV.checkResult(p.addKey(t),'Restore key');VMV.checkResult(p.setValueAtKey(t,s.keys[k][1],true),'Restore value');VMV.checkResult(p.setInterpolationTypeAtKey(t,s.keys[k][2],true),'Restore interpolation');}}}catch(e){throw Error('Cannot restore parameter '+i+': '+e.message);}}};
-MZ.owner=function(seq,target,data){var o=data[MZ.key(seq,target)];if(!o)return null;var c=target.clip.components[o.index];if(!c||String(c.matchName)!==o.match||VMV.fingerprint(c)!==o.fingerprint)throw Error('MZ_OWNERSHIP_CHANGED');return o;};
+MZ.snapshot=function(comp,interpolation){
+ var out=[];for(var i=0;i<comp.properties.numItems;i++){
+  var p=comp.properties[i],r={varying:p.areKeyframesSupported()?p.isTimeVarying():false,keys:[]},kk=r.varying?p.getKeys():null;
+  if(r.varying&&(!kk||!kk.length))throw Error('Cannot snapshot animated parameter without keys');
+  r.value=r.varying?p.getValueAtKey(kk[0]):p.getValue();
+  if(comp.matchName==='AE.ADBE Drop Shadow'&&i===0&&p.getColorValue)r.color=p.getColorValue();
+  if(p.areKeyframesSupported()){
+   r.varying=p.isTimeVarying();var keys=p.getKeys();
+   if(keys)for(var j=0;j<keys.length;j++)r.keys.push([String(keys[j].ticks),p.getValueAtKey(keys[j]),interpolation||0]);
+  }
+  out.push(r);
+ }return out;
+};
+MZ.restore=function(comp,snapshot){for(var i=0;i<snapshot.length;i++){var p=comp.properties[i],s=snapshot[i];try{if(p.areKeyframesSupported()){var keys=p.getKeys();if(keys)for(var j=keys.length-1;j>=0;j--)VMV.checkResult(p.removeKey(keys[j]),'Restore key');VMV.checkResult(p.setTimeVarying(false),'Restore animation');}if(s.color&&p.setColorValue)VMV.checkResult(p.setColorValue(s.color[0],s.color[1],s.color[2],s.color[3],true),'Restore color');else VMV.setStatic(p,s.value);if(s.varying&&s.keys.length){VMV.checkResult(p.setTimeVarying(true),'Restore animation');var automatic=p.getKeys();if(automatic)for(var a=automatic.length-1;a>=0;a--)VMV.checkResult(p.removeKey(automatic[a]),'Restore automatic key');for(var k=0;k<s.keys.length;k++){var t=new Time();t.ticks=s.keys[k][0];VMV.checkResult(p.addKey(t),'Restore key');VMV.checkResult(p.setValueAtKey(t,s.keys[k][1],true),'Restore value');VMV.checkResult(p.setInterpolationTypeAtKey(t,s.keys[k][2],true),'Restore interpolation');var confirmed=p.getKeys(),found=false;if(confirmed)for(var ci=0;ci<confirmed.length;ci++)if(String(confirmed[ci].ticks)===String(t.ticks))found=true;if(!found||!VMV.closeValue(p.getValueAtKey(t),s.keys[k][1]))throw Error('Restore key not confirmed');}}}catch(e){throw Error('Cannot restore parameter '+i+': '+e.message);}}};
+MZ.curves=function(comp){
+ var out=[];for(var i=0;i<comp.properties.numItems;i++){
+  var p=comp.properties[i];if(!p.areKeyframesSupported()||!p.isTimeVarying())continue;
+  var keys=p.getKeys();if(!keys||keys.length<2)continue;
+  if(typeof p.getValueAtTime!=='function')return null;
+  var samples=[];for(var j=1;j<keys.length;j++)for(var k=1;k<4;k++){
+   var t=Number(keys[j-1].ticks)/VMV.TICKS+(Number(keys[j].ticks)-Number(keys[j-1].ticks))/VMV.TICKS*k/4;
+   samples.push(p.getValueAtTime(VMV.time(t)));
+  }out.push([i,samples]);
+ }return VMV.encode(out);
+};
+MZ.owner=function(seq,target,data){var o=data[MZ.key(seq,target)];if(!o)return null;var c=target.clip.components[o.index];if(!c||String(c.matchName)!==o.match||VMV.fingerprint(c)!==o.fingerprint||(o.curves&&MZ.curves(c)!==o.curves))throw Error('MZ_OWNERSHIP_CHANGED');return o;};
 MZ.selection=function(){try{var seq=app.project.activeSequence,targets=VMV.getTargets(seq),data=MZ.load(),rows=[],conflicts=0;for(var i=0;i<targets.length;i++){var t=targets[i],o=MZ.owner(seq,t,data);if(o)conflicts++;rows.push({nodeId:t.nodeId,trackIndex:t.trackIndex,start:t.start,end:t.end,name:t.name,owned:!!o});}return VMV.encode({ok:true,rows:rows,count:rows.length,conflicts:conflicts,sequence:String(seq.sequenceID),fps:VMV.TICKS/Number(seq.timebase),saved:!!app.project.path,token:VMV.encode({project:MZ.projectKey(),sequence:String(seq.sequenceID),rows:rows})});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.resetOwned=function(comp,o){if(o.defaults)MZ.restore(comp,o.defaults);else throw Error('Missing original MZ defaults');};
 MZ.apply=function(request){
  var records=[],restores=[],seq=null,cross=null;
  try{
   if(!request||!request.kind||!request.options)throw Error('Invalid request');
-  if(!/^(photo|move|pop|rotate|stretch|whip|shake|pulse|fade|shadow)$/.test(request.kind))throw Error('Unknown tool');
+  if(!/^(photo|move|pop|rotate|stretch|whip|shake|pulse|fade|shadow|transition-slide|transition-zoom|transition-dip)$/.test(request.kind))throw Error('Unknown tool');
   seq=app.project.activeSequence;var targets=VMV.getTargets(seq),data=MZ.load(),check=MZJSON.parse(MZ.selection());if(!check.ok)throw Error(check.error);if(request.token!==check.token)throw Error('MZ_SELECTION_CHANGED');
   if(check.conflicts&&!request.replace)return VMV.encode({ok:false,needsConfirm:true,count:check.conflicts});
   var options=MZEngine.options(request.options),fps=VMV.TICKS/Number(seq.timebase),plans=[],specs=[],owners=[],qt=[],defaults=[],i,j;
+  var transition=request.kind.indexOf('transition-')===0;
+  if(transition)targets=MZ.transitionTargets(targets,1/fps);
+  if((request.kind==='move'||request.kind==='photo'||transition)&&!/^(linear|smooth)$/.test(options.easing))throw Error('MZ_NATIVE_EASING_ONLY');
   app.enableQE();var qseq=qe.project.getActiveSequence();if(!qseq)throw Error('No QE sequence');
   var match=request.kind==='shadow'?'AE.ADBE Drop Shadow':'AE.ADBE Geometry2';
   var effect=VMV.effect(match,match==='AE.ADBE Geometry2'?['Transform','Преобразование','Трансформация']:['Drop Shadow','Тень']);
   for(i=0;i<targets.length;i++){
    var t=targets[i],owner=MZ.owner(seq,t,data);if(owner&&owner.match!==match){if(targets.length!==1||owner.index!==t.clip.components.numItems-1||typeof owner.qeIndex!=='number')throw Error('MZ_DIFFERENT_EFFECT_KIND');cross=owner;}owners.push(owner);
-   var full=request.kind==='photo'||options.phase==='hold',last=(t.end-t.start)-1/fps;if(last<=0)throw Error('Clip too short');
-   var spec=MZEngine.build(request.kind,options,fps,full?last:Math.min(options.duration,last));
-   var plan=VMV.makePlan(seq,t,spec);plan.full=false;plan.offset=options.phase==='out'?Math.max(0,plan.last-spec.duration):0;
+   var perOptions={};for(var op in options)if(options.hasOwnProperty(op))perOptions[op]=options[op];
+   if(transition){perOptions.phase=i===0?'out':'in';perOptions.duration=options.duration/2;}
+   var full=request.kind==='photo'||perOptions.phase==='hold',last=(t.end-t.start)-1/fps;if(last<=0)throw Error('Clip too short');
+   if(transition&&last+1e-6<perOptions.duration)throw Error('MZ_TRANSITION_CLIP_TOO_SHORT');
+   var spec=MZEngine.build(request.kind,perOptions,fps,full?last:Math.min(perOptions.duration,last));
+   var protect=options.protect&&/^(move|photo|transition-slide|transition-zoom)$/.test(request.kind);
+   if(protect){spec=MZEngine.protect(spec,MZ.edgeGeometry(seq,t,owner?owner.index:-1),fps);spec.shutter=0;}
+   var plan=VMV.makePlan(seq,t,spec);plan.full=false;plan.offset=perOptions.phase==='out'?Math.max(0,plan.last-spec.duration):0;plan.interpolation=spec.interpolation||0;
    specs.push(spec);plans.push(plan);qt.push(VMV.qeClip(qseq,t,plan.frame));if(cross){var removable=qt[i].getComponentAt(cross.qeIndex);if(!removable||!removable.remove)throw Error('Effect replacement API unavailable');}
   }
   var next={};for(var key in data)if(data.hasOwnProperty(key))next[key]=data[key];
   for(i=0;i<targets.length;i++){
    var comp,old=owners[i];
-   if(old&&!cross){comp=targets[i].clip.components[old.index];restores.push({comp:comp,snapshot:MZ.snapshot(comp)});MZ.resetOwned(comp,old);defaults[i]=old.defaults;}
+   if(old&&!cross){comp=targets[i].clip.components[old.index];restores.push({comp:comp,snapshot:MZ.snapshot(comp,old.interpolation||0)});MZ.resetOwned(comp,old);defaults[i]=old.defaults;}
    else{comp=VMV.addEffect(seq,targets[i],qt[i],effect,match,records);defaults[i]=MZ.snapshot(comp);}
    if(match==='AE.ADBE Geometry2')VMV.configureTransform(comp,specs[i],plans[i]);else VMV.configureShadow(comp,specs[i].shadow[0]);
-   next[MZ.key(seq,targets[i])]={index:old?old.index:targets[i].clip.components.numItems-1,match:match,qeIndex:old?old.qeIndex:Number(qt[i].numComponents)-1,fingerprint:VMV.fingerprint(comp),defaults:defaults[i],kind:request.kind,options:options};
+   next[MZ.key(seq,targets[i])]={index:old?old.index:targets[i].clip.components.numItems-1,match:match,qeIndex:old?old.qeIndex:Number(qt[i].numComponents)-1,fingerprint:VMV.fingerprint(comp),defaults:defaults[i],kind:request.kind,options:options,interpolation:plans[i].interpolation,curves:MZ.curves(comp)};
   }
   MZ.persist(next);if(cross){var removalError=null;try{qt[0].getComponentAt(cross.qeIndex).remove();}catch(re){removalError=re;}if(targets[0].clip.components.numItems!==cross.index+1){MZ.persist(data);throw removalError||Error('Old effect could not be removed');}if(VMV.fingerprint(targets[0].clip.components[cross.index])!==next[MZ.key(seq,targets[0])].fingerprint)throw Error('Effect replacement verification failed');}var keys=0;for(i=0;i<plans.length;i++)keys+=plans[i].verifiedKeys||0;
   return VMV.encode({ok:true,count:targets.length,keys:keys,replaced:check.conflicts,saved:!!app.project.path});
- }catch(e){var restoreErrors=0;for(var r=restores.length-1;r>=0;r--)try{MZ.restore(restores[r].comp,restores[r].snapshot);}catch(ignored){restoreErrors++;}var left=seq?VMV.rollback(seq,records):0;return VMV.encode({ok:false,error:String(e.message||e),remainingEffects:left,restoreErrors:restoreErrors});}
+ }catch(e){var restoreErrors=0,restoreErrorDetails=[];for(var r=restores.length-1;r>=0;r--)try{MZ.restore(restores[r].comp,restores[r].snapshot);}catch(ignored){restoreErrors++;restoreErrorDetails.push(String(ignored.message||ignored));}var left=seq?VMV.rollback(seq,records):0;return VMV.encode({ok:false,error:String(e.message||e),remainingEffects:left,restoreErrors:restoreErrors,restoreErrorDetails:restoreErrorDetails});}
 };
 MZ.findBin=function(name,parent){parent=parent||app.project.rootItem;for(var i=0;i<parent.children.numItems;i++){var c=parent.children[i];if(c.type===2&&c.name===name)return c;}return parent.createBin(name);};
 MZ.importFiles=function(paths,binName){try{if(!(paths instanceof Array)||paths.length>200)throw Error('Select up to 200 files');var clean=[];for(var i=0;i<paths.length;i++){var f=new File(paths[i]);if(!f.exists)throw Error('File missing: '+f.name);if(!/\.(mp4|mov|mxf|avi|mkv|wav|mp3|aif|aiff|aac|m4a|png|jpg|jpeg|webp|psd|tif|tiff)$/i.test(f.name))throw Error('Unsupported media: '+f.name);clean.push(f.fsName);}var bin=MZ.findBin(binName||'Montazhopa');var ok=app.project.importFiles(clean,true,bin,false);if(!ok)throw Error('Premiere rejected import');return VMV.encode({ok:true,count:clean.length});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
@@ -64,8 +95,15 @@ MZ.applyCamera=function(request){var seq=null,records=[],backup=null,component=n
  if(offset>0){spec.scale.push([-offset,100]);spec.x.push([-offset,0]);spec.y.push([-offset,0]);if(offset>c.plan.frame){spec.scale.push([-c.plan.frame,100]);spec.x.push([-c.plan.frame,0]);spec.y.push([-c.plan.frame,0]);}}
  for(var i=0;i<route.keys.length;i++){var key=route.keys[i],t=key.frame*c.plan.frame;spec.scale.push([t,key.scale]);spec.x.push([t,key.x-.5]);spec.y.push([t,key.y-.5]);}
  app.enableQE();var qt=VMV.qeClip(qe.project.getActiveSequence(),c.target,c.plan.frame),defaults;
- if(owner){component=c.target.clip.components[owner.index];backup=MZ.snapshot(component);MZ.resetOwned(component,owner);defaults=owner.defaults;}else{component=VMV.addEffect(seq,c.target,qt,VMV.effect('AE.ADBE Geometry2',['Transform','Преобразование','Трансформация']),'AE.ADBE Geometry2',records);defaults=MZ.snapshot(component);}
+ if(owner){component=c.target.clip.components[owner.index];backup=MZ.snapshot(component,owner.interpolation||0);MZ.resetOwned(component,owner);defaults=owner.defaults;}else{component=VMV.addEffect(seq,c.target,qt,VMV.effect('AE.ADBE Geometry2',['Transform','Преобразование','Трансформация']),'AE.ADBE Geometry2',records);defaults=MZ.snapshot(component);}
  c.plan.full=false;c.plan.offset=offset;c.plan.interpolation=0;VMV.configureCamera(component,spec,c.plan,'position');var next={};for(k in data)if(data.hasOwnProperty(k))next[k]=data[k];next[MZ.key(seq,c.target)]={index:owner?owner.index:c.target.clip.components.numItems-1,match:'AE.ADBE Geometry2',qeIndex:owner?owner.qeIndex:Number(qt.numComponents)-1,fingerprint:VMV.fingerprint(component),defaults:defaults,kind:'camera'};MZ.persist(next);return VMV.encode({ok:true,keys:c.plan.verifiedKeys,points:request.stops.length,replaced:!!owner});
  }catch(e){var restoreErrors=0;if(backup)try{MZ.restore(component,backup);}catch(ignored){restoreErrors=1;}return VMV.encode({ok:false,error:String(e.message||e),remainingEffects:seq?VMV.rollback(seq,records):0,restoreErrors:restoreErrors});}};
 
-$.evalFile(new File(File($.fileName).parent.fsName + '/integrations.jsx'));
+#include "integrations.jsx"
+#include "edge-protect.jsx"
+
+MZ.health=function(){try{
+ var required={"MZ.selection":MZ.selection,"MZ.apply":MZ.apply,"MZ.projectContext":MZ.projectContext,"MZ.importInterchange":MZ.importInterchange,"VMV.diagnostics":VMV.diagnostics,"VMV.getTargets":VMV.getTargets},names=[];
+ for(var key in required){if(required.hasOwnProperty(key)){if(typeof required[key]!=="function")throw Error("Missing JSX method: "+key);names.push(key);}}
+ return VMV.encode({ok:true,version:MZ.version,engine:"ExtendScript",methods:names});
+}catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0,fileName:String(e.fileName||"")});}};
