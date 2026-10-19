@@ -1,0 +1,52 @@
+name: Verify Montazhopa
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run JavaScript and Premiere-host simulation tests
+        run: |
+          node tests/engine.cjs
+          node tests/host.cjs
+          node tests/local.cjs
+          node tests/core.test.cjs
+          node --test tests/upstream/syncitol.test.cjs
+      - name: Run Python worker tests
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Build and verify release ZIP
+        run: |
+          python tools/build_release.py
+          python - <<'PY'
+          import hashlib, pathlib, zipfile
+          for zip_path in pathlib.Path("dist").glob("Montazhopa_*.zip"):
+              with zipfile.ZipFile(zip_path) as archive:
+                  assert archive.testzip() is None
+              checksum = zip_path.with_suffix(".zip.sha256").read_text().split()[0]
+              assert hashlib.sha256(zip_path.read_bytes()).hexdigest() == checksum
+              print("PASS", zip_path.name)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: montazhopa-verified-package
+          path: |
+            dist/Montazhopa_*.zip
+            dist/Montazhopa_*.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
