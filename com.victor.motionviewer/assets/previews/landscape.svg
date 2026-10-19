@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
+<defs>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#c5d4e0"/><stop offset=".55" stop-color="#eedac9"/><stop offset="1" stop-color="#e1c5b5"/></linearGradient>
+ <linearGradient id="lake" x2=".2" y2="1"><stop stop-color="#c6cfcb"/><stop offset=".5" stop-color="#9caeb1"/><stop offset="1" stop-color="#637e84"/></linearGradient>
+ <linearGradient id="rock" x1=".2" y1="0" x2=".8" y2="1"><stop stop-color="#c1b9ac"/><stop offset=".5" stop-color="#7d8282"/><stop offset="1" stop-color="#4b6368"/></linearGradient>
+ <linearGradient id="near" x2=".9" y2="1"><stop stop-color="#5b7377"/><stop offset="1" stop-color="#263d44"/></linearGradient>
+ <filter id="cloud"><feGaussianBlur stdDeviation="24"/></filter>
+ <filter id="texture"><feTurbulence type="fractalNoise" baseFrequency=".65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".07"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+</defs>
+<g filter="url(#texture)">
+<path fill="url(#sky)" d="M0 0h1200v675H0z"/>
+<g fill="#fff0dc" opacity=".6" filter="url(#cloud)"><ellipse cx="868" cy="131" rx="260" ry="20"/><ellipse cx="188" cy="100" rx="210" ry="16"/><ellipse cx="635" cy="261" rx="380" ry="14"/></g>
+<path fill="#9fadb2" d="m0 398 112-111 67 38 109-153 46 50 86-114 46 69 51-30 99 145 53-31 100 113 108-188 69 58 65-118 118 168 71-44v420H0Z"/>
+<path fill="#c6cac4" d="m189 324 99-152 46 50 86-114 46 69 51-30 50 77-62-27-36 28-47-69-43 113-40-10-26 54-34-27-44 66z"/>
+<path fill="url(#rock)" d="m0 403 145-60 120 28 98-92 99 77 109-106 56 46 43-20 130 153 109-148 85 75 73-19 133 72v266H0z"/>
+<g fill="none" stroke="#d4d1c4" stroke-width="3" opacity=".36"><path d="m365 282-51 102-36 8M571 253l-19 102-45 43M626 299l-4 76 43 54M908 286l-42 108-6 35M997 358l-14 54 42 46"/></g>
+<path fill="url(#lake)" d="M0 440q240-45 479 8 196 31 430-22l291 27v222H0z"/>
+<path fill="#bfcac3" opacity=".4" d="m161 448 267 5 106 13-250 9 192 11-136 9 243 13-53 9-392-24 103-14-135-8zm553 20 247-12-47 13 122 12-259 15 43-11-168-8z"/>
+<path fill="url(#near)" d="M0 307q100 43 151 125 35 37 165 56 46 9 25 20L0 562zm1200-12q-74 84-125 156-37 43-152 60l277 68z"/>
+<path fill="#1f363e" d="M0 613q141-66 258-29 79 22 125 91H0zm1200-74q-93-6-182 52l-166 84h348z"/>
+<g fill="#31494b"><path d="m61 524 13-97 14 97h-9v48H70v-48zm61-17 15-112 16 112h-11v46h-10v-46zm1027 13 17-126 17 126h-12v41h-11v-41z"/></g>
+<path fill="#5e6861" d="m868 579 41-12 55 16-5 16-71 7z"/>
+<path fill="#d8d5c6" d="m870 578 39-11 32 10-52 8z"/>
+</g></svg>

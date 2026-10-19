@@ -27,8 +27,14 @@ async function main(){
  // Generate (but do not execute) the detached updater and validate its shell syntax.
  const next=L.stageUpdate(makePackage(),target);let spawned;
  const realRequire=context.require;context.require=name=>name==='child_process'?{spawn:(file,args)=>{spawned={file,args};return {pid:987654321,on(){return this;},unref(){}};}}:realRequire(name);
- load('update-installer.js');assert.equal(L.launchUpdate(),'3.1.0-beta.1');assert.equal(spawned.file,'/bin/sh');
- require('node:child_process').execFileSync('/bin/sh',['-n',spawned.args[0]]);assert.throws(()=>L.launchUpdate());
+ load('update-installer.js');assert.equal(L.launchUpdate(),'3.1.0-beta.1');assert.equal(spawned.file,process.platform==='win32'?'powershell.exe':'/bin/sh');
+ if(process.platform==='win32'){
+  const script=spawned.args[spawned.args.length-1];
+  const parser='$tokens=$null; $errors=$null; [System.Management.Automation.Language.Parser]::ParseFile($env:ALTO_TEST_UPDATER, [ref]$tokens, [ref]$errors) | Out-Null; if ($errors.Count) { $errors | Out-String | Write-Error; exit 1 }';
+  // Inline command parses the generated text; no script runs or policy changes.
+  require('node:child_process').execFileSync('powershell.exe',['-NoProfile','-Command',parser],{windowsHide:true,env:Object.assign({},process.env,{ALTO_TEST_UPDATER:script})});
+ }else require('node:child_process').execFileSync('/bin/sh',['-n',spawned.args[0]]);
+ assert.throws(()=>L.launchUpdate());
  L.updateStarted=false;fs.rmSync(next.stage,{recursive:true});L.hasPendingUpdate();context.require=realRequire;
  // Release channels and package-name selection; no real network call.
  let fetched=0;context.fetch=async()=>{fetched++;return {ok:true,json:async()=>[

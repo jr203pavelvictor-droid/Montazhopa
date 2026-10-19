@@ -12,7 +12,7 @@ Montazhopa is a CEP panel with its own UI, host bridge, data storage, watcher an
 - Revision: `afa1cfa23742ebb88fd47273b090766817412195`
 - Copyright (c) 2026 UncleLuki.
 - Source: `js/audioPreview.js` → `com.victor.motionviewer/vendor/vibe-audio.js`.
-- Changes: classic-script wrapper, optional filesystem/browser I/O, bounded waveform cache, real error handling instead of random fallback, stale-load guard, source disconnection, explicit export instead of automatic shell execution, UI lifecycle adaptation. Original waveform, player, seek, pitch/reverse and drawing code retained.
+- Changes: classic-script wrapper, optional filesystem/browser I/O, bounded waveform cache keyed by file size/mtime, all-channel waveform with a shared decoded buffer, pre-read size limit, real errors instead of random fallback, stale-load guard, source disconnection, idempotent pause, explicit export instead of automatic shell execution, UI lifecycle adaptation. Original player, seek, pitch/reverse and drawing code retained. ALTO's separate ui/audio-range.js extends this player with range/fades controls and immutable PCM export.
 - Full license: `com.victor.motionviewer/licenses/VibeTools.txt`.
 - VibeTools' bundled FFmpeg executable, DLL, importer and control-surface plugin are **not** included.
 

@@ -85,20 +85,47 @@ def handle(r):
         from opencut.core.repeat_detect import detect_repeated_takes
         return detect_repeated_takes(r['segments'], threshold=finite(r.get('threshold', .6), .1, 1))
     f = media_path(r['path'])
+    if op == 'validate_source':
+        expected = r['source']
+        stat = Path(f).stat()
+        if (expected.get('path') != f or expected.get('size') != stat.st_size
+                or str(expected.get('mtime_ns')) != str(stat.st_mtime_ns)):
+            raise ValueError('Source changed since analysis; analyze again')
+        return {'valid': True}
     from opencut.utils.media import probe
     info = probe(f)
     if not info.has_audio:
         raise ValueError('The file has no audio stream')
+    if op == 'preview_audio':
+        import subprocess
+        from opencut.helpers import get_ffmpeg_path
+        p = output_path('.wav')
+        try:
+            subprocess.run([get_ffmpeg_path(), '-nostdin', '-v', 'error', '-i', f,
+                            '-vn', '-c:a', 'pcm_s16le', p], check=True,
+                           capture_output=True, timeout=600)
+        except Exception:
+            Path(p).unlink(missing_ok=True)
+            raise
+        return {'path': p}
     if op == 'silence':
         from opencut.core.silence import detect_speech
         from opencut.utils.config import SilenceConfig
         cfg = SilenceConfig(threshold_db=finite(r.get('threshold', -35), -90, -5),
                             min_duration=finite(r.get('minPause', .4), .05, 10),
-                            padding_before=finite(r.get('padding', .1), 0, 1),
-                            padding_after=finite(r.get('padding', .1), 0, 1))
+                            padding_before=finite(r.get('paddingBefore', r.get('padding', .1)), 0, 1),
+                            padding_after=finite(r.get('paddingAfter', r.get('padding', .1)), 0, 1))
         segments = detect_speech(f, config=cfg, file_duration=info.duration, method='energy')
-        return {'duration': info.duration, 'segments': [{'start': s.start, 'end': s.end} for s in segments]}
+        stat = Path(f).stat()
+        return {'duration': info.duration, 'segments': [{'start': s.start, 'end': s.end} for s in segments],
+                'source': {'path': f, 'size': stat.st_size, 'mtime_ns': str(stat.st_mtime_ns)}}
     if op == 'xml':
+        expected = r.get('source')
+        if expected:
+            stat = Path(f).stat()
+            if (expected.get('path') != f or expected.get('size') != stat.st_size
+                    or str(expected.get('mtime_ns')) != str(stat.st_mtime_ns)):
+                raise ValueError('Source changed since analysis; analyze again')
         from opencut.export.premiere import export_premiere_xml
         from opencut.utils.config import ExportConfig
         segments = clean_segments(r['segments'], info.duration)

@@ -1,0 +1,141 @@
+{
+  "capturedAt": "2026-10-19T20:47:02.436Z",
+  "renderer": "155.0.8059.82",
+  "screenshots": 12,
+  "audit": [
+    {
+      "screen": "home",
+      "width": 420,
+      "height": 800,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "catalog",
+      "width": 420,
+      "height": 800,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "zoom",
+      "width": 420,
+      "height": 800,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "settings",
+      "width": 420,
+      "height": 800,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "home",
+      "width": 320,
+      "height": 700,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "catalog",
+      "width": 320,
+      "height": 700,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "zoom",
+      "width": 320,
+      "height": 700,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "settings",
+      "width": 320,
+      "height": 700,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "home",
+      "width": 600,
+      "height": 850,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "catalog",
+      "width": 600,
+      "height": 850,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "zoom",
+      "width": 600,
+      "height": 850,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    },
+    {
+      "screen": "settings",
+      "width": 600,
+      "height": 850,
+      "overflow": false,
+      "mainOverflow": false,
+      "font": "Montserrat, Arial, sans-serif",
+      "blur": "blur(32px) saturate(1.6)",
+      "bodyScroll": false
+    }
+  ],
+  "checks": [
+    "No horizontal overflow at all 12 screen/viewport pairs",
+    "Local Montserrat and CSS backdrop blur",
+    "9 animations / 3 transitions / RU search",
+    "Favorites add/remove",
+    "Adjustment Layer connection button explains binding and applying without claiming a live connection",
+    "Motion Zoom: numeric scale, easing, dragging, playback, add/remove point",
+    "Glass and animation preferences",
+    "RU/EN language menu",
+    "Ctrl K search and Escape dismissal",
+    "No browser errors or external requests"
+  ],
+  "errors": [],
+  "externalRequests": []
+}

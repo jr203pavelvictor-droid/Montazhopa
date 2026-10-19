@@ -54,7 +54,10 @@ jobs:
           node tests/bridge.test.cjs
           node tests/local.cjs
           node tests/core.test.cjs
+          node tests/production-update.cjs
           node --test tests/upstream/syncitol.test.cjs
+          ffmpeg -version
+          ffprobe -version
           python -m unittest discover -s tests -p 'test_*.py'
       - name: Install browser test dependencies
         run: |
@@ -66,6 +69,7 @@ jobs:
         run: |
           node tests/ui.cjs
           node tests/alto-ui.cjs
+          node tests/production-ui.cjs
       - name: Save interface previews
         uses: actions/upload-artifact@v4
         with:
@@ -73,7 +77,9 @@ jobs:
           path: test-results/ui/*.png
           if-no-files-found: error
       - name: Build release assets
-        run: python tools/build_release.py
+        run: |
+          python tools/build_release.py
+          node tests/release-package.cjs
       - name: Validate release checksum
         shell: bash
         run: |

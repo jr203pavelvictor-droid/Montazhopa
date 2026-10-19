@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#242b40">
+  <title>ALTO — визуальный прототип</title>
+  <link rel="icon" href="assets/alto-symbol.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="preview.css">
+  <script src="preview.js" defer></script>
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"><div class="light light-one"></div><div class="light light-two"></div><div class="ribbon ribbon-one"></div><div class="ribbon ribbon-two"></div><div class="grain"></div></div>
+  <div class="app-shell">
+    <header class="app-header">
+      <button class="brand" data-screen="home" aria-label="ALTO · Главная"><img src="assets/alto-lockup.svg" alt="ALTO" width="117" height="45"></button>
+      <span class="version">4.0 <span>PREVIEW</span></span>
+      <div class="header-actions">
+        <button class="icon-button glass" id="global-search" aria-label="Поиск" title="Поиск · Ctrl K"></button>
+        <button class="icon-button glass" data-screen="settings" aria-label="Настройки" title="Настройки"></button>
+      </div>
+    </header>
+    <main id="main" tabindex="-1"></main>
+    <div class="bottom-fade" aria-hidden="true"></div>
+    <nav class="dock glass" aria-label="Экраны прототипа">
+      <span class="dock-selection" aria-hidden="true"></span>
+      <button data-screen="home"><span class="nav-icon" data-icon="home"></span><span>Главная</span></button>
+      <button data-screen="catalog"><span class="nav-icon" data-icon="motion"></span><span>Движение</span></button>
+      <button data-screen="zoom"><span class="nav-icon" data-icon="zoom"></span><span>Motion Zoom</span></button>
+      <button data-screen="settings"><span class="nav-icon" data-icon="settings"></span><span>Настройки</span></button>
+    </nav>
+  </div>
+  <div class="toast glass" id="toast" role="status" hidden></div>
+  <dialog id="detail-dialog" class="glass modal"><div id="dialog-content"></div></dialog>
+  <input type="file" id="frame-upload" accept="image/*" hidden>
+</body>
+</html>

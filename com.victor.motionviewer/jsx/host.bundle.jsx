@@ -858,8 +858,36 @@ var MZEngine=(function(){
 if(typeof module!=='undefined'&&module.exports)module.exports=MZEngine;
 
 
+
+/* bundled: timeline-model.js */
+/* Shared ES3 model: UI, ExtendScript and tests use the same time rules. */
+var AltoTimeline=(function(){
+ function n(v,min,max,label){v=Number(v);if(!isFinite(v)||v<min||v>max)throw Error('Invalid '+label);return v;}
+ function copy(v){var o={},k;for(k in v)if(v.hasOwnProperty(k))o[k]=v[k];return o;}
+ function freezeTransitions(stops,defaults){for(var i=1;i<stops.length;i++){var o=copy(defaults),k;if(stops[i].transition)for(k in stops[i].transition)if(stops[i].transition.hasOwnProperty(k))o[k]=stops[i].transition[k];stops[i].transition=o;}return stops;}
+ // Incoming transition belongs to its destination point, including after reorder.
+ function reorder(stops,from,to){n(from,0,stops.length-1,'source point');n(to,0,stops.length-1,'destination point');if(from%1||to%1)throw Error('Invalid point index');var point=stops.splice(from,1)[0];stops.splice(to,0,point);return to;}
+ function duplicate(stops,index){n(index,0,stops.length-1,'point');if(index%1||stops.length>=10)throw Error('Maximum 10 views');var point=copy(stops[index]);if(point.transition)point.transition=copy(point.transition);if(point.focus)point.focus=copy(point.focus);stops.splice(index+1,0,point);return index+1;}
+ function focus(stops,route){var events=[],i,f,keys=[],fps=n(route.fps,1,240,'FPS'),duration=route.frames/fps;
+  for(i=0;i<stops.length;i++){var o=stops[i].focus;if(!o)continue;var strength=n(o.strength,0,200,'blur strength');if(!strength)continue;
+   var arrival=route.arrivals[i]/fps;if(!isFinite(arrival))throw Error('Missing route arrival');
+   var a=arrival+n(o.riseStart,-30,30,'blur start'),b=a+n(o.riseDuration,.01,30,'blur rise'),c=arrival+n(o.fallStart,-30,60,'focus return'),d=c+n(o.fallDuration,.01,30,'focus return duration');
+   if(a<0||c<b||d>duration+1e-7)throw Error('Blur interval must fit route and return after its rise (view '+(i+1)+')');events.push({start:a,peak:b,returnAt:c,end:d,strength:strength,point:i});
+  }
+  // Maximum envelope resolves overlaps deterministically. One value per frame.
+  for(f=0;f<=route.frames;f++){var t=f/fps,value=0;for(i=0;i<events.length;i++){var e=events[i],v=0;if(t>=e.start&&t<=e.end){if(t<e.peak)v=e.strength*(t-e.start)/(e.peak-e.start);else if(t<=e.returnAt)v=e.strength;else v=e.strength*(e.end-t)/(e.end-e.returnAt);}value=Math.max(value,v);}keys.push([f/fps,value]);}
+  return {keys:keys,events:events,duration:duration};
+ }
+ function audio(o,duration){var a=n(o.in,0,duration,'audio In'),b=n(o.out,0,duration,'audio Out');if(b-a<.001)throw Error('Audio Out must follow In');var fi=n(o.fadeIn||0,0,b-a,'fade-in'),fo=n(o.fadeOut||0,0,b-a,'fade-out');if(fi+fo>b-a+1e-8)throw Error('Audio fades overlap');return {in:a,out:b,fadeIn:fi,fadeOut:fo,duration:b-a};}
+ function removals(speech,duration){var out=[],cursor=0;for(var i=0;i<speech.length;i++){var a=n(speech[i].start,0,duration,'speech start'),b=n(speech[i].end,0,duration,'speech end');if(a<cursor||b<=a)throw Error('Invalid speech intervals');if(a>cursor)out.push({start:cursor,end:a,remove:true});cursor=b;}if(cursor<duration)out.push({start:cursor,end:duration,remove:true});return out;}
+ function retained(cuts,duration){var out=[],cursor=0;for(var i=0;i<cuts.length;i++){var c=cuts[i];if(!c.remove)continue;if(c.start<cursor||c.end<=c.start||c.end>duration)throw Error('Invalid silence intervals');if(c.start>cursor)out.push({start:cursor,end:c.start});cursor=c.end;}if(cursor<duration)out.push({start:cursor,end:duration});return out;}
+ return {number:n,copy:copy,freezeTransitions:freezeTransitions,reorder:reorder,duplicate:duplicate,focus:focus,audio:audio,removals:removals,retained:retained};
+}());
+if(typeof module!=='undefined'&&module.exports)module.exports=AltoTimeline;
+
+
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'4.0.0-beta.1',memory:{}};
+var MZ={version:'4.0.0-beta.2',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};
@@ -943,18 +971,19 @@ MZ.workflow=function(action){try{var seq=app.project.activeSequence;if(!seq)thro
 MZ.effects=function(){try{app.enableQE();var names=qe.project.getVideoEffectList();if(!names||!names.length)throw Error('Effect list API unavailable');var out=[];for(var i=0;i<names.length&&i<3000;i++)out.push(String(names[i]));return VMV.encode({ok:true,effects:out});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.applyNative=function(name,token){var records=[],seq=null;try{var check=MZJSON.parse(MZ.selection());if(!check.ok)throw Error(check.error);if(token!==check.token)throw Error('MZ_SELECTION_CHANGED');seq=app.project.activeSequence;var ts=VMV.getTargets(seq),frame=Number(seq.timebase)/VMV.TICKS;app.enableQE();var effect=qe.project.getVideoEffectByName(String(name));if(!effect)throw Error('Effect unavailable');var q=qe.project.getActiveSequence(),targets=[];for(var i=0;i<ts.length;i++)targets.push(VMV.qeClip(q,ts[i],frame));for(i=0;i<ts.length;i++){var before=VMV.matchNames(ts[i].clip);var qeBefore=Number(targets[i].numComponents),addError=null;try{targets[i].addVideoEffect(effect);}catch(ae){addError=ae;}var after=VMV.matchNames(ts[i].clip);if(after.length===before.length+1)records.push({target:ts[i],qtarget:targets[i],before:before,expected:after[after.length-1],qeBefore:qeBefore});if(addError)throw addError;if(after.length!==before.length+1)throw Error('Effect was not added');}return VMV.encode({ok:true,count:ts.length});}catch(e){return VMV.encode({ok:false,error:String(e.message||e),remainingEffects:seq?VMV.rollback(seq,records):0});}};
 MZ.insertMogrt=function(path,videoTrack){try{var seq=app.project.activeSequence;if(!seq||!seq.importMGT)throw Error('MOGRT API unavailable');var v=Number(videoTrack);if(v<0||v>=seq.videoTracks.numTracks||seq.videoTracks[v].isLocked())throw Error('Invalid target track');var start=VMV.seconds(seq.getPlayerPosition());for(var i=0;i<seq.videoTracks[v].clips.numItems;i++){var c=seq.videoTracks[v].clips[i];if(VMV.seconds(c.end)>start)throw Error('MZ_TRACK_OCCUPIED');}var item=seq.importMGT(path,seq.getPlayerPosition().ticks,v,0);if(!item)throw Error('MOGRT import failed');return VMV.encode({ok:true});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
-MZ.applyCamera=function(request){var seq=null,records=[],backup=null,component=null;try{
- var c=VMV.cameraTarget(),b=request.binding;seq=c.seq;if(!b||String(b.sequenceID)!==String(seq.sequenceID)||String(b.nodeId)!==c.target.nodeId||b.start!==c.target.start||b.end!==c.target.end||b.width!==c.width||b.height!==c.height||Math.abs(b.sourceIn-c.plan.sourceIn)>.000001||Math.abs(b.sourceRate-c.plan.sourceRate)>.000001)throw Error('MZ_SELECTION_CHANGED');
+MZ.applyCamera=function(request){var seq=null,records=[],backup=null,component=null,focusBatch=null;try{
+ var c=MZ.boundCamera(request.binding),b=request.binding;seq=c.seq;if(!b||String(b.sequenceID)!==String(seq.sequenceID)||String(b.nodeId)!==c.target.nodeId||b.start!==c.target.start||b.end!==c.target.end||b.width!==c.width||b.height!==c.height||Math.abs(b.sourceIn-c.plan.sourceIn)>.000001||Math.abs(b.sourceRate-c.plan.sourceRate)>.000001)throw Error('MZ_SELECTION_CHANGED');
  var data=MZ.load(),owner=MZ.owner(seq,c.target,data);if(owner&&!request.replace)return VMV.encode({ok:false,needsConfirm:true,count:1});if(owner&&owner.match!=='AE.ADBE Geometry2')throw Error('MZ_DIFFERENT_EFFECT_KIND');
  var opts=request.options,offset=0;if(request.start==='playhead'){if(c.playhead<c.target.start||c.playhead>=c.target.end)throw Error('Playhead must be inside layer');offset=Math.ceil((c.playhead-c.target.start)/c.plan.frame-.000001)*c.plan.frame;}
  var available=Math.floor((c.plan.last-offset)/c.plan.frame+.000001),build={};for(var k in opts)if(opts.hasOwnProperty(k))build[k]=opts[k];build.fitFrames=opts.fit?available:null;var route=MZEngine.camera(request.stops,build,1/c.plan.frame);if(route.frames>available)throw Error('Route exceeds layer');
  var spec={scale:[],x:[],y:[],shutter:MZMotion.number(Number(opts.shutter),0,360,'Motion Blur')};
  if(offset>0){spec.scale.push([-offset,100]);spec.x.push([-offset,0]);spec.y.push([-offset,0]);if(offset>c.plan.frame){spec.scale.push([-c.plan.frame,100]);spec.x.push([-c.plan.frame,0]);spec.y.push([-c.plan.frame,0]);}}
  for(var i=0;i<route.keys.length;i++){var key=route.keys[i],t=key.frame*c.plan.frame;spec.scale.push([t,key.scale]);spec.x.push([t,key.x-.5]);spec.y.push([t,key.y-.5]);}
+ focusBatch=MZ.prepareFocus(request,c,route,offset,data);
  app.enableQE();var qt=VMV.qeClip(qe.project.getActiveSequence(),c.target,c.plan.frame),defaults;
  if(owner){component=c.target.clip.components[owner.index];backup=MZ.snapshot(component,owner.interpolation||0);MZ.resetOwned(component,owner);defaults=owner.defaults;}else{component=VMV.addEffect(seq,c.target,qt,VMV.effect('AE.ADBE Geometry2',['Transform','Преобразование','Трансформация']),'AE.ADBE Geometry2',records);defaults=MZ.snapshot(component);}
- c.plan.full=false;c.plan.offset=offset;c.plan.interpolation=0;VMV.configureCamera(component,spec,c.plan,'position');var next={};for(k in data)if(data.hasOwnProperty(k))next[k]=data[k];next[MZ.key(seq,c.target)]={index:owner?owner.index:c.target.clip.components.numItems-1,match:'AE.ADBE Geometry2',qeIndex:owner?owner.qeIndex:Number(qt.numComponents)-1,fingerprint:VMV.fingerprint(component),defaults:defaults,kind:'camera'};MZ.persist(next);return VMV.encode({ok:true,keys:c.plan.verifiedKeys,points:request.stops.length,replaced:!!owner});
- }catch(e){var restoreErrors=0;if(backup)try{MZ.restore(component,backup);}catch(ignored){restoreErrors=1;}return VMV.encode({ok:false,error:String(e.message||e),remainingEffects:seq?VMV.rollback(seq,records):0,restoreErrors:restoreErrors});}};
+ c.plan.full=false;c.plan.offset=offset;c.plan.interpolation=0;VMV.configureCamera(component,spec,c.plan,'position');var next={};for(k in data)if(data.hasOwnProperty(k))next[k]=data[k];next[MZ.key(seq,c.target)]={index:owner?owner.index:c.target.clip.components.numItems-1,match:'AE.ADBE Geometry2',qeIndex:owner?owner.qeIndex:Number(qt.numComponents)-1,fingerprint:VMV.fingerprint(component),defaults:defaults,kind:'camera'};MZ.writeFocus(focusBatch,records,next);MZ.persist(next);return VMV.encode({ok:true,keys:c.plan.verifiedKeys,points:request.stops.length,replaced:!!owner});
+ }catch(e){var restoreErrors=MZ.restoreFocus(focusBatch).length;if(backup)try{MZ.restore(component,backup);}catch(ignored){restoreErrors=1;}return VMV.encode({ok:false,error:String(e.message||e),remainingEffects:seq?VMV.rollback(seq,records):0,restoreErrors:restoreErrors});}};
 
 /* bundled: jsx/integrations.jsx */
 /* Montazhopa CEP adapters. No timeline deletion or positional QE-index guesses. */
@@ -1081,8 +1110,114 @@ MZ.discardTimelineFrame=function(ticket){
 };
 
 
+
+/* bundled: jsx/focus-diagnostics.jsx */
+/* Explicit target bindings. Public DOM data; QE insertion only after all preflight. */
+MZ.boundCamera=function(binding){
+ var seq=app.project.activeSequence;if(!seq||!binding||String(seq.sequenceID)!==String(binding.sequenceID))throw Error('Вернись в секвенцию подключённого Adjustment Layer.');
+ var target={nodeId:String(binding.nodeId),trackIndex:Number(binding.trackIndex),start:binding.start,end:binding.end},clip=VMV.publicClip(seq,target);target.clip=clip;target.name=String(clip.name);
+ if(!clip.isAdjustmentLayer||!clip.isAdjustmentLayer())throw Error('Подключённый слой больше не является Adjustment Layer.');
+ if(seq.videoTracks[target.trackIndex].isLocked())throw Error('Дорожка Adjustment Layer заблокирована.');
+ var plan=VMV.makePlan(seq,target,{group:'CAMERA',duration:0,title:'Motion Zoom'});
+ return {seq:seq,target:target,plan:plan,width:Number(seq.frameSizeHorizontal),height:Number(seq.frameSizeVertical),playhead:VMV.seconds(seq.getPlayerPosition())};
+};
+MZ.focusTargetData=function(seq,target,allowNest){
+ var clip=target.clip,item=clip.projectItem,plan=VMV.makePlan(seq,target,{group:'CAMERA',duration:0,title:'Расфокус'});
+ if(clip.isAdjustmentLayer&&clip.isAdjustmentLayer())throw Error('Для селективного расфокуса выбери отделённый видеоклип или отдельный нест героини, а не Adjustment Layer.');
+ if(!item)throw Error('У цели нет исходника.');
+ if(item.isSequence&&item.isSequence()&&!allowNest)throw Error('Нест размоется целиком. Подтверди, что это отдельный нест только нужного объекта, или выбери отделённый клип.');
+ if(Math.abs(plan.sourceRate-1)>.000001||(clip.getSpeed&&Math.abs(clip.getSpeed()-1)>.000001))throw Error('Расфокус: изменение скорости не поддерживается; привяжи клип со скоростью 100%.');
+ for(var i=0;i<clip.components.numItems;i++)if(/time.?remap/i.test(String(clip.components[i].matchName))){var props=clip.components[i].properties;for(var j=0;j<props.numItems;j++)if(props[j].areKeyframesSupported()&&props[j].isTimeVarying())throw Error('Расфокус: обнаружен анимированный Time Remapping; используй отдельный клип без изменения скорости.');}
+ return {nodeId:target.nodeId,trackIndex:target.trackIndex,name:target.name,start:target.start,end:target.end,sourceIn:plan.sourceIn,sourceRate:plan.sourceRate,nested:!!(item.isSequence&&item.isSequence()),effects:VMV.encode(VMV.matchNames(clip))};
+};
+MZ.bindFocusTargets=function(allowNest){try{var seq=app.project.activeSequence,targets=VMV.getTargets(seq),rows=[];for(var i=0;i<targets.length;i++)rows.push(MZ.focusTargetData(seq,targets[i],allowNest===true));return VMV.encode({ok:true,project:MZ.projectKey(),sequenceID:String(seq.sequenceID),targets:rows,allowNest:allowNest===true});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
+MZ.blurEffect=function(){
+ var names=qe.project.getVideoEffectList();if(!names||!names.length)throw Error('Premiere не предоставляет список установленных эффектов.');
+ var matches=[];for(var i=0;i<names.length;i++)if(/^(gaussian blur(?: \(legacy\))?|размытие по гауссу(?: \(устаревшее\))?)$/i.test(String(names[i])))matches.push(String(names[i]));
+ if(!matches.length)throw Error('Gaussian Blur не найден. Проверь установленный эффект в панели Effects и язык RU/EN.');
+ var effect=qe.project.getVideoEffectByName(matches[0]);if(!effect)throw Error('Gaussian Blur недоступен для добавления.');return {effect:effect,name:matches[0]};
+};
+MZ.blurParameter=function(component){
+ var found=[];for(var i=0;i<component.properties.numItems;i++){var p=component.properties[i],name=String(p.displayName||'');if(/^(blurriness|blur radius|степень размытия|размытие|радиус размытия)$/i.test(name))found.push(p);}
+ if(found.length!==1)throw Error('Не удалось однозначно определить параметр силы установленного Gaussian Blur. Изменения отменены.');
+ var param=found[0],value=param.getValue();if(typeof value!=='number'||!isFinite(value)||!param.areKeyframesSupported())throw Error('Этот Gaussian Blur не поддерживает подтверждённую анимацию силы размытия.');return param;
+};
+MZ.prepareFocus=function(request,camera,route,offset,data){
+ var model=AltoTimeline.focus(request.stops,route),batch={rows:[],restores:[],model:model};if(!model.events.length&&!request.focusBinding)return batch;
+ var binding=request.focusBinding;if(!binding||binding.project!==MZ.projectKey()||String(binding.sequenceID)!==String(camera.seq.sequenceID))throw Error('Явно привяжи цели расфокуса в секвенции зума. Клип внутри общего неста выбери в отдельном нестe только героини; автоматическое раскрытие вложенных секвенций не выполняется.');
+ if(!binding.targets||!binding.targets.length||binding.targets.length>50)throw Error('Выбери от 1 до 50 целей расфокуса.');
+ app.enableQE();var qseq=qe.project.getActiveSequence(),effect=model.events.length?MZ.blurEffect():null,at=camera.target.start+offset;
+ for(var i=0;i<binding.targets.length;i++){
+  var b=binding.targets[i],target={nodeId:String(b.nodeId),trackIndex:Number(b.trackIndex),start:b.start,end:b.end,name:b.name};
+  if(target.nodeId===camera.target.nodeId)throw Error('Цель расфокуса совпала со слоем зума.');
+  if(camera.seq.videoTracks[target.trackIndex].isLocked())throw Error('Дорожка цели расфокуса заблокирована: '+b.name);
+  target.clip=VMV.publicClip(camera.seq,target);var current=MZ.focusTargetData(camera.seq,target,binding.allowNest);
+  if(current.sourceIn!==b.sourceIn||current.sourceRate!==b.sourceRate)throw Error('Цель расфокуса изменилась: '+b.name+'. Привяжи цели заново.');
+  if(at<target.start-.000001||at+model.duration>target.end-Number(camera.seq.timebase)/VMV.TICKS+.000001)throw Error('Цель '+b.name+' не покрывает весь маршрут. Продли клип или сократи маршрут до применения.');
+  var key='focus/'+MZ.key(camera.seq,target),owned=data[key],comp=null;
+  // Zero strengths clear previously owned envelopes without adding new effects.
+  if(!model.events.length&&!owned)continue;
+  if(owned){comp=target.clip.components[owned.index];if(!comp||VMV.fingerprint(comp)!==owned.fingerprint||MZ.curves(comp)!==owned.curves)throw Error('Расфокус ALTO изменён вручную: '+b.name);MZ.blurParameter(comp);}
+  var qt=VMV.qeClip(qseq,target,camera.plan.frame);if(!qt.getComponentAt)throw Error('Удаление добавленного эффекта недоступно.');
+  batch.rows.push({target:target,qtarget:qt,effect:effect,owned:owned,component:comp,key:key,plan:{sourceIn:current.sourceIn+at-target.start,sourceRate:1,interpolation:0,verifiedKeys:0}});
+ }return batch;
+};
+MZ.writeFocus=function(batch,records,next){
+ for(var i=0;i<batch.rows.length;i++){
+  var row=batch.rows[i],comp=row.component,defaults;
+  if(comp){batch.restores.push({comp:comp,snapshot:MZ.snapshot(comp,0)});defaults=row.owned.defaults;MZ.restore(comp,defaults);}
+  else{
+   var before=VMV.matchNames(row.target.clip),beforeQE=Number(row.qtarget.numComponents),addError=null;
+   try{row.qtarget.addVideoEffect(row.effect.effect);}catch(e){addError=e;}
+   var after=VMV.matchNames(row.target.clip);
+   if(after.length===before.length+1)records.push({target:row.target,qtarget:row.qtarget,before:before,expected:after[after.length-1],qeBefore:beforeQE});
+   if(addError)throw addError;if(after.length!==before.length+1||!VMV.sameNames(before,after.slice(0,before.length)))throw Error('Premiere не подтвердил добавление Gaussian Blur.');
+   comp=row.target.clip.components[before.length];
+   if(!/gaussian|гаусс/i.test(String(comp.matchName)+' '+String(comp.displayName)))throw Error('Добавленный эффект не подтверждён как Gaussian Blur.');
+   defaults=MZ.snapshot(comp);
+  }
+  var p=MZ.blurParameter(comp),keys=MZEngine.simplify(batch.model.keys,.001);VMV.writeKeys(p,keys,row.plan);
+  next[row.key]={index:row.owned?row.owned.index:row.target.clip.components.numItems-1,match:String(comp.matchName),fingerprint:VMV.fingerprint(comp),curves:MZ.curves(comp),defaults:defaults,interpolation:0};
+ }
+};
+MZ.restoreFocus=function(batch){var errors=[];if(batch)for(var i=batch.restores.length-1;i>=0;i--)try{MZ.restore(batch.restores[i].comp,batch.restores[i].snapshot);}catch(e){errors.push(String(e.message||e));}return errors;};
+MZ.inspectProject=function(){try{
+ var rows=[],limitations=[],count=0;
+ function issue(item,problem,path,location,action){rows.push({nodeId:item?String(item.nodeId||''):'',name:item?String(item.name||''):'',problem:problem,path:path||'',location:location||'Project',action:action||'Проверь исходник в Project'});}
+ function visit(item,location){if(++count>50000)throw Error('Слишком много объектов: проверка ограничена 50000.');if(item.children){for(var i=0;i<item.children.numItems;i++)visit(item.children[i],location+'/'+String(item.name||''));}
+  try{if(item.isSequence&&item.isSequence())return;if(item.isOffline&&item.isOffline())issue(item,'Offline media','',location,'Найди исходник и перепривяжи вручную в Premiere');var p=item.getMediaPath?item.getMediaPath():'';if(p&&!new File(p).exists)issue(item,'Путь исходника недоступен',p,location,'Проверь диск и доступность файла');}catch(e){issue(item,'API не смог проверить исходник: '+e.message,'',location);}}
+ visit(app.project.rootItem,'Project');var seq=app.project.activeSequence;
+ if(seq){var types=['videoTracks','audioTracks'];for(var t=0;t<types.length;t++){var tracks=seq[types[t]];if(!tracks)continue;for(var j=0;j<tracks.numTracks;j++)for(var k=0;k<tracks[j].clips.numItems;k++){var clip=tracks[j].clips[k];if(!clip.projectItem)issue(clip,'Отсутствует доступная связь с ProjectItem','',(t?'A':'V')+(j+1)+' · '+VMV.seconds(clip.start).toFixed(2)+' с','Проверь клип в Premiere');}}}
+ limitations.push('Проверяются доступность исходников и связи через DOM; качество изображения/звука и содержимое масок не анализируются.');
+ return VMV.encode({ok:true,rows:rows,checked:count,limitations:limitations});
+ }catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
+MZ.revealProjectObject=function(nodeId){try{var found=null;function visit(item){if(String(item.nodeId)===String(nodeId))found=item;if(item.children)for(var i=0;i<item.children.numItems;i++)visit(item.children[i]);}visit(app.project.rootItem);if(!found||!app.project.selectItem)throw Error('Переход к этому объекту API не поддерживает; найди его по имени в Project.');app.project.selectItem(found);return VMV.encode({ok:true});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
+MZ.editContext=function(){try{var seq=app.project.activeSequence;if(!seq)throw Error('Open a sequence');return VMV.encode({ok:true,token:VMV.encode({project:MZ.projectKey(),sequence:String(seq.sequenceID)})});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
+
+
+
+/* bundled: jsx/audio-excerpt.jsx */
+MZ.audioDestination=function(trackIndex,duration){try{
+ var seq=app.project.activeSequence;if(!seq)throw Error('Open a sequence');duration=AltoTimeline.number(duration,.001,86400,'audio duration');trackIndex=AltoTimeline.number(trackIndex,0,seq.audioTracks.numTracks-1,'audio track');if(trackIndex%1)throw Error('Invalid track');
+ var track=seq.audioTracks[trackIndex];if(track.isLocked())throw Error('Audio track locked');var at=VMV.seconds(seq.getPlayerPosition()),clips=[];
+ for(var i=0;i<track.clips.numItems;i++){var c=track.clips[i],a=VMV.seconds(c.start),b=VMV.seconds(c.end);if(a<at+duration&&b>at)throw Error('MZ_TRACK_OCCUPIED');clips.push([String(c.nodeId),a,b]);}
+ return VMV.encode({ok:true,token:VMV.encode({project:MZ.projectKey(),sequence:String(seq.sequenceID),track:trackIndex,at:at,duration:duration,clips:clips})});
+ }catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
+MZ.insertAudioRange=function(path,trackIndex,token,duration){var added=null,fresh=[],seq=null,track=null;try{
+ var check=MZJSON.parse(MZ.audioDestination(trackIndex,duration));if(!check.ok)throw Error(check.error);if(check.token!==token)throw Error('Audio destination changed. Check the track and retry.');
+ seq=app.project.activeSequence;track=seq.audioTracks[trackIndex];var before={},i;for(i=0;i<track.clips.numItems;i++)before[String(track.clips[i].nodeId)]=true;
+ var result=null,insertError=null;try{result=MZJSON.parse(MZ.insertMedia(path,trackIndex,true));}catch(ie){insertError=ie;}
+ for(i=0;i<track.clips.numItems;i++)if(!before[String(track.clips[i].nodeId)])fresh.push(track.clips[i]);
+ if(insertError)throw insertError;if(!result.ok)throw Error(result.error);
+ if(fresh.length!==1)throw Error('Premiere did not confirm exactly one inserted audio clip');added=fresh[0];
+ var expected=MZJSON.parse(token),frame=Number(seq.timebase)/VMV.TICKS;
+ if(Math.abs(VMV.seconds(added.start)-expected.at)>frame/4||Math.abs(VMV.seconds(added.end)-VMV.seconds(added.start)-duration)>frame||!added.projectItem||String(new File(added.projectItem.getMediaPath()).fsName)!==String(new File(path).fsName))throw Error('Inserted audio readback failed');
+ return VMV.encode({ok:true,nodeId:String(added.nodeId),duration:VMV.seconds(added.end)-VMV.seconds(added.start)});
+ }catch(e){var remaining=0;for(var r=fresh.length-1;r>=0;r--){var clip=fresh[r];try{var id=String(clip.nodeId);clip.remove(false,false);for(var k=0;k<track.clips.numItems;k++)if(String(track.clips[k].nodeId)===id)remaining++;}catch(re){remaining++;}}return VMV.encode({ok:false,error:String(e.message||e),remainingClips:remaining});}};
+
+
 MZ.health=function(){try{
- var required={"MZ.captureTimelineFrame":MZ.captureTimelineFrame,"MZ.pollTimelineFrame":MZ.pollTimelineFrame,"MZ.discardTimelineFrame":MZ.discardTimelineFrame,"MZ.selection":MZ.selection,"MZ.apply":MZ.apply,"MZ.projectContext":MZ.projectContext,"MZ.importInterchange":MZ.importInterchange,"VMV.diagnostics":VMV.diagnostics,"VMV.getTargets":VMV.getTargets},names=[];
+ var required={"MZ.bindFocusTargets":MZ.bindFocusTargets,"MZ.inspectProject":MZ.inspectProject,"MZ.audioDestination":MZ.audioDestination,"MZ.insertAudioRange":MZ.insertAudioRange,"MZ.captureTimelineFrame":MZ.captureTimelineFrame,"MZ.pollTimelineFrame":MZ.pollTimelineFrame,"MZ.discardTimelineFrame":MZ.discardTimelineFrame,"MZ.selection":MZ.selection,"MZ.apply":MZ.apply,"MZ.projectContext":MZ.projectContext,"MZ.importInterchange":MZ.importInterchange,"VMV.diagnostics":VMV.diagnostics,"VMV.getTargets":VMV.getTargets},names=[];
  for(var key in required){if(required.hasOwnProperty(key)){if(typeof required[key]!=="function")throw Error("Missing JSX method: "+key);names.push(key);}}
  return VMV.encode({ok:true,version:MZ.version,engine:"ExtendScript",methods:names});
 }catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0,fileName:String(e.fileName||"")});}};

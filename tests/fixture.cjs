@@ -26,6 +26,11 @@ class Param{
  setColorValue(...v){this.value=v.slice(0,4);this.writes++;return 0;}
 }
 function component(match,options={}){
+ if(match==='AE.ADBE Gaussian Blur 2'){
+  const properties=[new Param(false),new Param(0),new Param(0,options)];
+  properties[0].displayName='Repeat Edge Pixels';properties[1].displayName='Blur Dimensions';properties[2].displayName=options.blurLabel||'Blurriness';
+  return {matchName:match,displayName:'Gaussian Blur',properties:collection(properties)};
+ }
  if(match==='AE.ADBE Motion')return {matchName:match,properties:collection([new Param([.5,.5]),new Param(100),new Param(100),new Param(true),new Param(0),new Param([.5,.5])])};
  if(match==='AE.ADBE Geometry2'){
   const point=options.pixelPoints?[2000,1500]:[.5,.5];
@@ -51,7 +56,7 @@ function fixture(clips=[clip('Photo',12,3)],options={}){
  }
  if(options.ambiguous)qitems.push(qitems[qitems.length-1]);
  const qseq={getVideoTrackAt:i=>({numItems:qitems.length,getItemAt:j=>qitems[j]})};
- const context={Time,app:{version:'25.5.0',project:{activeSequence:sequence},enableQE(){}},qe:{project:{getActiveSequence:()=>qseq,getVideoEffectByName:name=>name==='AE.ADBE Geometry2'||name==='AE.ADBE Drop Shadow'?{matchName:name}:null}}};
+ const context={Time,app:{version:'25.5.0',project:{activeSequence:sequence},enableQE(){}},qe:{project:{getActiveSequence:()=>qseq,getVideoEffectList:()=>['Transform','Gaussian Blur'],getVideoEffectByName:name=>name==='Gaussian Blur'?{matchName:'AE.ADBE Gaussian Blur 2'}:name==='AE.ADBE Geometry2'||name==='AE.ADBE Drop Shadow'?{matchName:name}:null}}};
  // The real CEP ExtendScript runtime exposes File() and $.evalFile().
  // Simulate only the loader here so host.jsx can execute its companion module
  // without changing production code or relying on a real Premiere process.
