@@ -2,7 +2,7 @@
 #include "json.jsx"
 #include "../engine.js"
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'3.2.0-beta.1',memory:{}};
+var MZ={version:'3.2.0-beta.2',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};
@@ -101,9 +101,10 @@ MZ.applyCamera=function(request){var seq=null,records=[],backup=null,component=n
 
 #include "integrations.jsx"
 #include "edge-protect.jsx"
+#include "frame-capture.jsx"
 
 MZ.health=function(){try{
- var required={"MZ.selection":MZ.selection,"MZ.apply":MZ.apply,"MZ.projectContext":MZ.projectContext,"MZ.importInterchange":MZ.importInterchange,"VMV.diagnostics":VMV.diagnostics,"VMV.getTargets":VMV.getTargets},names=[];
+ var required={"MZ.captureTimelineFrame":MZ.captureTimelineFrame,"MZ.pollTimelineFrame":MZ.pollTimelineFrame,"MZ.discardTimelineFrame":MZ.discardTimelineFrame,"MZ.selection":MZ.selection,"MZ.apply":MZ.apply,"MZ.projectContext":MZ.projectContext,"MZ.importInterchange":MZ.importInterchange,"VMV.diagnostics":VMV.diagnostics,"VMV.getTargets":VMV.getTargets},names=[];
  for(var key in required){if(required.hasOwnProperty(key)){if(typeof required[key]!=="function")throw Error("Missing JSX method: "+key);names.push(key);}}
  return VMV.encode({ok:true,version:MZ.version,engine:"ExtendScript",methods:names});
 }catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0,fileName:String(e.fileName||"")});}};

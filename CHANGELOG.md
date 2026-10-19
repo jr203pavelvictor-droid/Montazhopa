@@ -1,3 +1,11 @@
+# 3.2.0-beta.2 — 2026-10-19
+
+- Motion Zoom: «Взять кадр с таймлайна» captures the active sequence at the playhead and loads the image automatically.
+- PNG signature, dimensions and browser decoding are verified. False QE return values are not confused with missing files; delayed output is polled for up to 5 seconds.
+- A moving playhead / sequence change rejects stale output. Existing reference remains on failure. No timeline, In/Out, effects, track visibility or playhead mutations.
+- Private temporary paths and exact-ticket cleanup; no Desktop/Finder screenshot steps, network upload or Media Encoder dialogs.
+- Still contains visible effects. Capture an overview frame for accurate route placement. Live Premiere QE export validation is pending.
+
 # 3.2.0-beta.1 — 2026-10-19
 
 - Two native position keys for Move, verified Bezier/readback and transactional paired transitions.

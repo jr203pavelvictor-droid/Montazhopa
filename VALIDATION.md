@@ -1,3 +1,11 @@
+# Frame capture tests for 3.2.0-beta.2
+
+`node tests/frame-capture.cjs`: verifies QE receipts (false/true/throw output), pending files, PNG headers and dimensions, stale sequence/playhead rejection, Unicode paths, private ticket cleanup and bounded non-symlink CEP loading.
+
+Browser UI test: one-click reference loading, decoded dimensions, ticket cleanup, and preservation of the old image on a later capture error. Live Premiere export remains unverified.
+
+---
+
 # Validation for 3.2.0-beta.1
 
 - `node tests/iteration1.cjs`: native endpoint key counts, all eight directions with every-frame coverage at 60 fps, portrait geometry, unsupported Motion preflight, ignored-Bezier rejection, shared-cut OUT/IN timing, invalid-selection rejection and rollback across two clips.

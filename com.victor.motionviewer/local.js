@@ -54,6 +54,15 @@
   if(staged.version!==release.version){removeTree(staged.stage);api.write('pending-update.json',null);throw Error('Release tag and package version differ');}
   return staged;
  };
+ api.frameDataURL=receipt=>{
+  if(!api.available)throw Error('MZ_DESKTOP_REQUIRED');
+  const target=path.resolve(String(receipt.path||'')),allowed=path.resolve(root,'frame-cache');
+  if(path.dirname(target)!==allowed||!/^mz-frame-[0-9]+-[0-9]+(?:\.png){0,2}$/.test(path.basename(target)))throw Error('Invalid frame path');
+  const stat=fs.lstatSync(target);if(!stat.isFile()||stat.isSymbolicLink()||stat.size<24||stat.size>20*1024*1024)throw Error('MZ_FRAME_READ');
+  const data=fs.readFileSync(target),signature=Buffer.from([137,80,78,71,13,10,26,10]);
+  if(!data.slice(0,8).equals(signature)||data.readUInt32BE(16)!==receipt.width||data.readUInt32BE(20)!==receipt.height)throw Error('MZ_FRAME_INVALID_PNG');
+  return 'data:image/png;base64,'+data.toString('base64');
+ };
  api.hasPendingUpdate=()=>{const p=api.read('pending-update.json',null);if(p&&(!api.available||!fs.existsSync(p.stage))){api.write('pending-update.json',null);return null;}return p;};
 
  window.MZLocal=api;
