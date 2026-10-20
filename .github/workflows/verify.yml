@@ -74,6 +74,7 @@ jobs:
           node tests/ui.cjs
           node tests/alto-ui.cjs
           node tests/myinstants-ui.cjs
+          node tests/alto-themes.cjs
           node tests/production-ui.cjs
       - name: Save interface previews
         uses: actions/upload-artifact@v4
