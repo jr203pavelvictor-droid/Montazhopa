@@ -7,8 +7,8 @@
  L.launchUpdate=()=>{
   if(L.updateStarted)throw Error('Update is already waiting for Premiere to close');
   const pending=L.hasPendingUpdate();if(!pending)throw Error('No staged update');
-  const stage=path.resolve(pending.stage),target=path.resolve(pending.target),parent=path.dirname(target);
-  if(path.basename(target)!==bundle||path.dirname(stage)!==parent||!path.basename(stage).startsWith(bundle+'.staging-'))throw Error('Invalid update paths');
+  const stage=path.resolve(pending.stage),target=L.extensionPath(pending.target),parent=path.dirname(target);
+  if(path.dirname(stage)!==parent||!path.basename(stage).startsWith(bundle+'.staging-')||fs.lstatSync(stage).isSymbolicLink())throw Error('Invalid update paths');
   if(!fs.existsSync(target))throw Error('Current extension folder is missing');
   const xml=fs.readFileSync(path.join(stage,'CSXS/manifest.xml'),'utf8');
   if(!xml.includes('ExtensionBundleId="'+bundle+'"'))throw Error('Staged panel identity is invalid');
@@ -18,7 +18,8 @@
    if(alive)throw Error('An updater is already waiting for Premiere to close');
    fs.unlinkSync(lockPath);
   }
-  const backup=target+'.previous',ps=s=>"'"+s.replace(/'/g,"''")+"'",sh=s=>"'"+s.replace(/'/g,"'\\''")+"'";
+  const backup=L.backupPath(),ps=s=>"'"+s.replace(/'/g,"''")+"'",sh=s=>"'"+s.replace(/'/g,"'\\''")+"'";
+  fs.mkdirSync(path.dirname(backup),{recursive:true});
   let file,args;
   if(process.platform==='win32'){
    const script=path.join(L.root(),'apply-update.ps1');

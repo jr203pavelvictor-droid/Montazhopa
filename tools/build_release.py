@@ -25,6 +25,7 @@ def build():
     bundle_host(panel)
     subprocess.run(['node',str(ROOT/'tests/es3-parse.cjs'),str(panel/'jsx/host.bundle.jsx')],check=True)
     subprocess.run(['node',str(ROOT/'tests/cep-startup.cjs')],check=True)
+    subprocess.run(['node',str(ROOT/'tests/update-paths.cjs')],check=True)
     for js in sorted(panel.rglob('*.js')):
         subprocess.run(['node','--check',str(js)],check=True,capture_output=True)
     files={p.relative_to(panel).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(panel.rglob('*')) if p.is_file() and '__pycache__' not in p.parts and p.suffix!='.pyc'}

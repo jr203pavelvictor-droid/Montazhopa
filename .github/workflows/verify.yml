@@ -10,6 +10,23 @@ permissions:
   contents: read
 
 jobs:
+  macos-update:
+    runs-on: macos-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify macOS paths and installer recovery in private storage
+        run: |
+          bash -n INSTALL_MAC.command
+          node tests/update-paths.cjs
+          node tests/mac-installer.cjs
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -34,6 +51,8 @@ jobs:
           node tests/core.test.cjs
           node tests/production-update.cjs
           node tests/cep-startup.cjs
+          node tests/update-paths.cjs
+          node tests/mac-installer.cjs
           node --test tests/upstream/syncitol.test.cjs
       - name: Run Python worker tests
         run: |

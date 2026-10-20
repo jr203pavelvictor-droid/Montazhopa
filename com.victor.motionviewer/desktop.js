@@ -5,7 +5,7 @@
  window.MZDesktop=api;
  if(!api.available)return;
  const req=window.require||require,fs=req('fs'),path=req('path'),cp=req('child_process'),url=req('url');
- function panelRoot(){return path.dirname(url.fileURLToPath(window.location.href));}
+ function panelRoot(){return L.extensionPath();}
  api.config=()=>L.read('tools.json',{python:'',ffmpeg:'',ffprobe:'',model:''});
  api.saveConfig=c=>L.write('tools.json',c);
  api.fileURL=p=>url.pathToFileURL(p).href;
