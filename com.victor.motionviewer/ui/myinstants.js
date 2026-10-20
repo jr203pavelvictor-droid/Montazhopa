@@ -1,7 +1,7 @@
 /* Standalone Meme Sounds screen. Keeps the existing ALTO sounds library untouched. */
 (function () {
   'use strict';
-  var client=window.AltoMyinstantsClient, state={query:'',results:[],loading:false,downloading:'',folder:'',message:'',error:'',lastFiles:[]};
+  var client=window.AltoMyinstantsClient, state={query:'',results:[],loading:false,downloading:'',adding:'',folder:'',message:'',error:'',lastFiles:[]};
   var activeAudio=null, activeObjectUrl=null;
   try {state.folder=(window.MZLocal.read('myinstants-settings.json',{})||{}).folder||'';}catch(e){}
   function stop() {
@@ -70,6 +70,15 @@
     }catch(e){state.error='Ошибка загрузки: '+e.message;state.message='';}
     finally{state.downloading='';U.render();}
   }
+  async function addToLogo(U,item) {
+    if(state.adding)return;
+    state.adding=item.mp3;state.error='';state.message='Добавляю звук к логотипу…';U.render();
+    try{
+      var added=await window.AltoLogoSounds.add(item);
+      state.message=added?'Добавлено к логотипу ALTO: '+item.title:'Этот звук уже привязан к логотипу';
+    }catch(e){state.error='Не удалось добавить: '+e.message;state.message='';}
+    finally{state.adding='';U.render();}
+  }
   function render(U, back) {
     var m=U.$('main');
     if(!window.MZLocal.available){
@@ -107,7 +116,10 @@
       var play=U.button(U.t('▶ Слушать','▶ Play'),function(){preview(U,item);});
       var save=U.button(state.downloading===item.mp3?U.t('Скачиваю…','Downloading…'):U.t('↓ Скачать MP3','↓ Download MP3'),function(){download(U,item);},'apply');
       save.disabled=!!(state.loading||state.downloading);
-      controls.append(play,save);row.append(info,controls);results.append(row);
+      var added=window.AltoLogoSounds&&window.AltoLogoSounds.contains(item);
+      var bind=U.button(added?U.t('✓ У логотипа','✓ In logo list'):state.adding===item.mp3?U.t('Добавляю…','Adding…'):U.t('+ К логотипу','+ To logo'),function(){addToLogo(U,item);});
+      bind.disabled=!!(added||state.loading||state.downloading||state.adding);
+      controls.append(play,save,bind);row.append(info,controls);results.append(row);
     });
     m.append(results);
     if(state.lastFiles.length){
