@@ -41,7 +41,7 @@
    var panel=U.panel(U.t('Оформление','Appearance')),body=U.el('div','alto-theme-choice');
    for(var choices=[['dark',U.t('Графит','Graphite'),'☾'],['light',U.t('Светлая','Light'),'☼']],i=0;i<choices.length;i++){
      var entry=choices[i],button=U.el('button'),swatch=U.el('span','alto-theme-swatch '+(entry[0]==='dark'?'graphite':'light'));
-     button.type='button';button.setAttribute('data-alto-theme-choice',entry[0]);swatch.setAttribute('aria-hidden','true');swatch.textContent=entry[2];
+     button.type='button';button.setAttribute('data-alto-theme-choice',entry[0]);button.setAttribute('aria-pressed',String(entry[0]===theme));swatch.setAttribute('aria-hidden','true');swatch.textContent=entry[2];
      button.append(swatch,U.el('strong','',entry[1]));
      button.addEventListener('click',function(choice){return function(){setTheme(choice);};}(entry[0]));
      body.append(button);
