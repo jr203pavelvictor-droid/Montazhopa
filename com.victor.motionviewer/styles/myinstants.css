@@ -1,0 +1,25 @@
+/* Myinstants native ALTO surface; small and isolated to avoid design regressions. */
+.mi-panel{display:grid;gap:14px;margin:12px 0 10px}
+.mi-search{display:grid;grid-template-columns:minmax(0,1fr) 102px;gap:9px;align-items:stretch;min-width:0}
+.mi-search>input[type=search]{display:block;width:100%;min-width:0;max-width:100%;height:42px;box-sizing:border-box;padding:9px 12px;outline-offset:2px;font-size:12px}
+.mi-search>button.apply{display:block;width:102px;min-width:0;max-width:102px;margin:0;padding:9px 11px;min-height:42px;white-space:nowrap}
+@media(max-width:349px){.mi-search{grid-template-columns:minmax(0,1fr) 78px;gap:6px}.mi-search>button.apply{width:78px;max-width:78px;padding:8px 5px}}
+.mi-folder{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.mi-path{display:flex;flex-direction:column;min-width:0;flex:1;gap:5px}
+.mi-path strong{font-size:12px;font-weight:600}
+.mi-path span{font-size:11px;line-height:1.4;color:var(--muted, #b1b7c0);overflow-wrap:anywhere}
+.mi-results{display:grid;gap:10px;margin:13px 0 18px}
+.mi-result{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:12px;border:1px solid rgba(222,230,246,.14);border-radius:15px;background:rgba(210,222,245,.055);box-shadow:inset 0 1px rgba(255,255,255,.08)}
+.mi-info{display:flex;flex-direction:column;gap:5px;min-width:0}
+.mi-info strong{font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.mi-actions{display:flex;flex-wrap:wrap;gap:7px}
+.mi-actions button{flex:1 1 auto;min-width:100px;min-height:36px}
+.mi-external,.mi-link{border:0;background:transparent;text-decoration:underline;text-underline-offset:3px;text-align:left;cursor:pointer}
+.mi-link{padding:0;font-size:11px;color:var(--muted, #b1b7c0)}
+.mi-external{font-size:12px;padding:5px 0}
+.mi-error,.mi-message{padding:9px 11px;border-radius:10px;font-size:12px;overflow-wrap:anywhere}
+.mi-error{background:rgba(228,76,77,.12);border:1px solid rgba(228,76,77,.36)}
+.mi-message{background:rgba(153,188,242,.10);border:1px solid rgba(153,188,242,.22)}
+.mi-saved-heading{margin:12px 0 6px;font-size:13px}
+.mi-last{font-size:11px;line-height:1.5;color:var(--muted, #b1b7c0);overflow-wrap:anywhere;margin:3px 0 8px}
+@media(min-width:570px){.mi-result{grid-template-columns:minmax(0,1fr) auto;align-items:center}.mi-actions{flex-wrap:nowrap}}
