@@ -27,7 +27,10 @@
    fs.writeFileSync(script,'\ufeff'+text,'utf8');file='powershell.exe';args=['-NoProfile','-ExecutionPolicy','Bypass','-File',script];
   }else{
    const script=path.join(L.root(),'apply-update.command');
-   const text='#!/bin/sh\nset -eu\ntarget='+sh(target)+'\nstage='+sh(stage)+'\nbackup='+sh(backup)+'\nlock='+sh(lockPath)+'\ntrap \'rm -f -- "$lock"\' EXIT\nwhile pgrep -f "/Adobe Premiere Pro[^/]*/Contents/MacOS/Adobe Premiere Pro" >/dev/null; do sleep 2; done\n[ -d "$stage" ] || exit 1\nrm -rf -- "$backup"\nmv -- "$target" "$backup"\nif ! mv -- "$stage" "$target"; then mv -- "$backup" "$target"; exit 1; fi\nprintf "Montazhopa update completed.\\n"\n';
+   // Inspect argv[0] only, never a helper's --launchedbyvulcan argument.
+   // A failed process query exits before touching the installed panel.
+   const waitForPremiere='while :; do\n processes="$(/bin/ps -axww -o comm=)" || exit 1\n if ! printf \'%s\\n\' "$processes" | /usr/bin/grep -Eq \'(^|/)Adobe Premiere Pro( [[:digit:]][^/]*)?$\'; then break; fi\n sleep 2\ndone\n';
+   const text='#!/bin/sh\nset -eu\ntarget='+sh(target)+'\nstage='+sh(stage)+'\nbackup='+sh(backup)+'\nlock='+sh(lockPath)+'\ntrap \'rm -f -- "$lock"\' EXIT\n'+waitForPremiere+'[ -d "$stage" ] || exit 1\nrm -rf -- "$backup"\nmv -- "$target" "$backup"\nif ! mv -- "$stage" "$target"; then mv -- "$backup" "$target"; exit 1; fi\nprintf "Montazhopa update completed.\\n"\n';
    fs.writeFileSync(script,text,{mode:0o700});file='/bin/sh';args=[script];
   }
   const fd=fs.openSync(path.join(L.root(),'update.log'),'a');let proc;
