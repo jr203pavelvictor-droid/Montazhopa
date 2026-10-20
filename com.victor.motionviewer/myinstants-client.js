@@ -48,7 +48,7 @@
       if (!link) continue;
       var href = attr(link[0], 'href');
       var title = decode(link[0].replace(/^<a\b[^>]*>/i, '').replace(/<\/a>[\s\S]*$/i, '').replace(/<[^>]*>/g, '').trim()).replace(/\s+/g, ' ').slice(0, 160);
-      var play = /\bplay\(\s*['"]([^'"]+\.mp3)['"]\s*\)/i.exec(decode(segment));
+      var play = /\bplay\(\s*['"]([^'"]+\.mp3)['"]/i.exec(decode(segment));
       if (!title || !play || !/^\/(?:en\/)?instant\/[^?#]+\/?$/.test(href)) continue;
       try {
         var mp3 = safeUrl(play[1], 'mp3');
