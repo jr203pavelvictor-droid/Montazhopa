@@ -22,6 +22,7 @@ const {chromium}=require(process.env.MZ_PLAYWRIGHT_MODULE||'playwright');
   assert.equal(await page.locator('#alto-theme-toggle').getAttribute('aria-checked'),'true');
   await page.waitForTimeout(750); // CSS transition is intentional; avoid Playwright waitForFunction under CEP's no-eval CSP.
   const bg=await page.locator('body').evaluate(e=>getComputedStyle(e).backgroundColor);
+  if(bg!=='rgb(234, 240, 241)'){const d=await page.evaluate(()=>({root:document.documentElement.getAttribute('data-theme'),rootVar:getComputedStyle(document.documentElement).getPropertyValue('--bg'),bodyVar:getComputedStyle(document.body).getPropertyValue('--bg'),bodyStyle:getComputedStyle(document.body).background,transition:getComputedStyle(document.body).transitionDuration,loaded:[...document.styleSheets].map(x=>x.href).filter(Boolean).slice(-5)}));console.error('THEME STYLE DIAGNOSTIC',JSON.stringify(d));}
   assert.equal(bg,'rgb(234, 240, 241)','Light background matches user reference after theme transition');
   assert.equal(await page.evaluate(()=>localStorage.getItem('mz3.preferences')),original,'Theme switch never overwrites Premiere preferences');
   await page.locator('#settings-toggle').click();
