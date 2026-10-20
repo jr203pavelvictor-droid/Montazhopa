@@ -27,6 +27,7 @@
  });}
  function literal(value){return JSON.stringify(value).replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');}
  function bundlePath(){
+  if(win.MZLocal&&win.MZLocal.available&&win.MZLocal.extensionPath)return win.MZLocal.extensionPath().replace(/\\/g,'/')+'/jsx/host.bundle.jsx';
   let value=win.__adobe_cep__.getSystemPath('extension');const req=win.require;
   if(req){const path=req('path');if(/^file:/i.test(value))value=req('url').fileURLToPath(value);else{value=decodeURI(value);if(req('os').platform()==='win32')value=value.replace(/^\/(?=[A-Za-z]:)/,'');}return path.join(value,'jsx','host.bundle.jsx').replace(/\\/g,'/');}
   value=decodeURI(value).replace(/^file:\/\//,'').replace(/^\/(?=[A-Za-z]:)/,'');return value.replace(/\/$/,'')+'/jsx/host.bundle.jsx';

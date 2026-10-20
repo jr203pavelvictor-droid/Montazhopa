@@ -18,7 +18,7 @@ async function main(){
  for(const name of ['../evil','/root','C:/evil','a\\b','aux.txt','a/../b','foo./bar'])assert.throws(()=>L.readZip(zip([[name,'bad']])));
  assert.throws(()=>L.readZip(zip([['App.js','a'],['app.js','b']])));
  const corrupt=zip([['test','ABC']]);corrupt[35]^=1;assert.throws(()=>L.readZip(corrupt));
- const target=path.join(temp,'extensions','com.victor.motionviewer');fs.mkdirSync(target,{recursive:true});fs.writeFileSync(path.join(target,'old'),'preserve');
+ const target=path.join(temp,'extensions','com.victor.motionviewer');fs.mkdirSync(target,{recursive:true});fs.mkdirSync(path.join(target,'CSXS'));fs.writeFileSync(path.join(target,'CSXS','manifest.xml'),'<ExtensionManifest ExtensionBundleId="com.victor.motionviewer"/>');fs.writeFileSync(path.join(target,'old'),'preserve');
  assert.throws(()=>L.stageUpdate(makePackage((m,f)=>f['app.js']='modified'),target));
  assert.equal(fs.readFileSync(path.join(target,'old'),'utf8'),'preserve');
  assert.throws(()=>L.stageUpdate(makePackage(m=>m.files['missing']='0'.repeat(64)),target));

@@ -8,7 +8,7 @@ assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),fs.readFile
 fs.mkdirSync(path.join(repo,'test-results'),{recursive:true});const home=fs.mkdtempSync(path.join(repo,'test-results','package-'));
 const context={window:{MZ_VERSION:'4.0.0-beta.1'},require:name=>name==='os'?Object.assign({},os,{homedir:()=>home}):require(name),process,Buffer,console};
 vm.runInNewContext(fs.readFileSync(path.join(panel,'local.js'),'utf8'),context);const L=context.window.MZLocal;
-const target=path.join(home,'extensions','com.victor.motionviewer');fs.mkdirSync(target,{recursive:true});fs.writeFileSync(path.join(target,'previous.txt'),'original panel');
+const target=path.join(home,'extensions','com.victor.motionviewer');fs.mkdirSync(target,{recursive:true});fs.mkdirSync(path.join(target,'CSXS'));fs.writeFileSync(path.join(target,'CSXS','manifest.xml'),'<ExtensionManifest ExtensionBundleId="com.victor.motionviewer"/>');fs.writeFileSync(path.join(target,'previous.txt'),'original panel');
 L.write('assets.json',[{id:'preserved',path:'/original/audio.wav'}]);L.write('variants.json',[{name:'Keep me'}]);L.write('watches.json',[{folder:'/original/watch',history:{keep:true}}]);
 const saved=Object.fromEntries(['assets.json','variants.json','watches.json'].map(n=>[n,JSON.stringify(L.read(n))]));
 const result=L.stageUpdate(bytes,target);assert.equal(result.version,version);assert.equal(fs.readFileSync(path.join(target,'previous.txt'),'utf8'),'original panel');

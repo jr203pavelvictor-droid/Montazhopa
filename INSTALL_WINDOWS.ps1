@@ -4,7 +4,8 @@ $source = Join-Path $PSScriptRoot $bundle
 $base = Join-Path $env:APPDATA 'Adobe\CEP\extensions'
 $target = Join-Path $base $bundle
 $stage = Join-Path $base ($bundle + '.install-staging')
-$backup = Join-Path $base ($bundle + '.previous')
+$backupRoot = Join-Path $env:APPDATA 'Montazhopa3\installation-backups'
+$backup = Join-Path $backupRoot $bundle
 if (Get-Process -ErrorAction SilentlyContinue | Where-Object {$_.ProcessName -like '*Premiere*'}) {
     throw 'Close Adobe Premiere Pro completely and run the installer again.'
 }
@@ -18,6 +19,7 @@ foreach ($entry in $manifest.files.PSObject.Properties) {
     if ($hash -ne $entry.Value) { throw "Checksum mismatch: $($entry.Name)" }
 }
 New-Item -ItemType Directory -Force $base | Out-Null
+New-Item -ItemType Directory -Force $backupRoot | Out-Null
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 Copy-Item -LiteralPath $source -Destination $stage -Recurse
 $moved = $false
@@ -37,7 +39,7 @@ try {
     }
     throw
 }
-Write-Host 'Montazhopa 3 installed for the current Windows account.'
-Write-Host 'Start Premiere: Window > Extensions (Legacy) > Montazhopa.'
-Write-Host 'Your previous panel is saved in com.victor.motionviewer.previous.'
+Write-Host 'ALTO installed for the current Windows account.'
+Write-Host 'Start Premiere: Window > Extensions (Legacy) > ALTO.'
+Write-Host "Your previous panel is saved in $backup"
 Write-Host 'Internet updates are OFF. Your personal assets are stored separately.'
