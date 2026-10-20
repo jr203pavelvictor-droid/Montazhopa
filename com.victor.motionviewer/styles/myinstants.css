@@ -1,8 +1,9 @@
 /* Myinstants native ALTO surface; small and isolated to avoid design regressions. */
 .mi-panel{display:grid;gap:14px;margin:12px 0 10px}
-.mi-search{display:flex;gap:8px;align-items:center}
-.mi-search input{min-width:0;flex:1 1 auto;outline-offset:2px}
-.mi-search button{flex:0 0 auto;white-space:nowrap}
+.mi-search{display:grid;grid-template-columns:minmax(0,1fr) 102px;gap:9px;align-items:stretch;min-width:0}
+.mi-search>input[type=search]{display:block;width:100%;min-width:0;max-width:100%;height:42px;box-sizing:border-box;padding:9px 12px;outline-offset:2px;font-size:12px}
+.mi-search>button.apply{display:block;width:102px;min-width:0;max-width:102px;margin:0;padding:9px 11px;min-height:42px;white-space:nowrap}
+@media(max-width:349px){.mi-search{grid-template-columns:minmax(0,1fr) 78px;gap:6px}.mi-search>button.apply{width:78px;max-width:78px;padding:8px 5px}}
 .mi-folder{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .mi-path{display:flex;flex-direction:column;min-width:0;flex:1;gap:5px}
 .mi-path strong{font-size:12px;font-weight:600}
