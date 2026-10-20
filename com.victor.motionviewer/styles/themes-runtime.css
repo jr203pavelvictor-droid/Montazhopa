@@ -28,7 +28,9 @@
  --alto-menu:#f2f6f8e8;--alto-modal:#f3f7f9ea;--alto-input-placeholder:#748595;
  --alto-rim:linear-gradient(125deg,#ffffffed,#ffffff80 24%,#ffffff33 55%,#ffffffba);
 }
-body{color:var(--alto-foreground);transition:background-color .4s,color .35s}
+body{color:var(--alto-foreground);transition:color .35s}
+/* Keep the document backdrop synchronous; only the inner glass and atmosphere layers crossfade. */
+html[data-theme] body{transition:none!important}
 /* ALTO's legacy panel also declares a body background. Bind themes explicitly at higher specificity. */
 html[data-theme="dark"] body{background-color:#18191b!important;background-image:none!important}
 html[data-theme="light"] body{background-color:#eaf0f1!important;background-image:none!important}
