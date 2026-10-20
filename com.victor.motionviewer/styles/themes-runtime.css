@@ -28,7 +28,10 @@
  --alto-menu:#f2f6f8e8;--alto-modal:#f3f7f9ea;--alto-input-placeholder:#748595;
  --alto-rim:linear-gradient(125deg,#ffffffed,#ffffff80 24%,#ffffff33 55%,#ffffffba);
 }
-body{background:var(--bg);color:var(--alto-foreground);transition:background-color .4s,color .35s}
+body{color:var(--alto-foreground);transition:background-color .4s,color .35s}
+/* ALTO's legacy panel also declares a body background. Bind themes explicitly at higher specificity. */
+html[data-theme="dark"] body{background-color:#18191b!important;background-image:none!important}
+html[data-theme="light"] body{background-color:#eaf0f1!important;background-image:none!important}
 .alto-atmosphere{background:radial-gradient(ellipse at 95% 50%,#34363a57,transparent 65%),linear-gradient(145deg,#1d1e21,#151618 55%,#202124)}
 .alto-atmosphere:before{content:"";position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .45s;background:radial-gradient(ellipse at 5% 3%,#e5f2f8 0,transparent 52%),radial-gradient(ellipse at 100% 49%,#d2e4e780,transparent 52%),radial-gradient(ellipse at 28% 96%,#f1ddd38f,transparent 50%),linear-gradient(143deg,#eff3f4,#e6edee 50%,#e9eced)}
 html[data-theme="light"] .alto-atmosphere:before{opacity:1}
