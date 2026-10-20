@@ -11,7 +11,13 @@ mz_backup="$mz_data/installation-backups/com.victor.motionviewer"
 is_alto_panel() {
  [ -f "$1/CSXS/manifest.xml" ] && /usr/bin/grep -Eq "ExtensionBundleId[[:space:]]*=[[:space:]]*[\"']com[.]victor[.]motionviewer[\"']" "$1/CSXS/manifest.xml"
 }
-if /usr/bin/pgrep -f '/Adobe Premiere Pro[^/]*/Contents/MacOS/Adobe Premiere Pro([[:space:]]|$)' >/dev/null 2>&1; then
+# comm contains argv[0] only. AdobeIPCBroker can mention Premiere in its
+# arguments after Premiere exits; matching the full command line blocks forever.
+if ! mz_processes="$(/bin/ps -axww -o comm=)"; then
+ echo 'Cannot check running applications. No files were changed. Try the installer again.'
+ exit 1
+fi
+if printf '%s\n' "$mz_processes" | /usr/bin/grep -Eq '(^|/)Adobe Premiere Pro( [[:digit:]][^/]*)?$'; then
  echo 'Close Adobe Premiere Pro completely, then run this installer again.'
  exit 1
 fi

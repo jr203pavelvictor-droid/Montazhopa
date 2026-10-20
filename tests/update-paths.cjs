@@ -26,7 +26,22 @@ try{
  const staged=L.stageUpdate(bytes,pathToFileURL(target).href);assert.equal(staged.target,fs.realpathSync(target));assert.equal(fs.readFileSync(path.join(target,'original.txt'),'utf8'),'old panel');
  load('update-installer.js');L.launchUpdate();assert.equal(spawned.length,1);
  const script=fs.readFileSync(spawned[0].args[spawned[0].args.length-1],'utf8');assert(script.includes('installation-backups'));assert(!script.includes(target+'.previous'));
- if(process.platform!=='win32')cp.execFileSync('/bin/sh',['-n',spawned[0].args[0]]);
+ if(process.platform!=='win32'){
+  cp.execFileSync('/bin/sh',['-n',spawned[0].args[0]]);
+  const guard=script.slice(script.indexOf('while :;'),script.indexOf('[ -d "$stage" ]'));
+  assert(guard.includes('/bin/ps -axww -o comm='));assert(!guard.includes('pgrep'));
+  const stub=path.join(home,'process-list'),calls=path.join(home,'process-calls');
+  const quoted=s=>"'"+s.replace(/'/g,"'\\''")+"'";
+  const helpers='/Library/Application Support/Adobe/AdobeIPCBroker\n/Applications/Adobe Premiere Pro 2026/Adobe Premiere Pro 2026.app/Contents/MacOS/crashpad_handler';
+  const probe=guard.replace('/bin/ps',quoted(stub)).replace('sleep 2',"printf 'WAIT\\n'");
+  fs.writeFileSync(stub,'#!/bin/sh\n[ "$*" = "-axww -o comm=" ] || exit 9\nprintf \'%s\\n\' '+quoted(helpers)+'\n',{mode:0o700});
+  assert.equal(cp.execFileSync('/bin/sh',['-c',probe],{encoding:'utf8'}),'','Orphan helpers must not delay the updater');
+  fs.writeFileSync(stub,'#!/bin/sh\nif [ ! -e '+quoted(calls)+' ]; then\n : > '+quoted(calls)+'\n printf \'%s\\n\' \'/Custom Apps/Adobe Premiere Pro.app/Contents/MacOS/Adobe Premiere Pro\'\nfi\n');
+  assert.equal(cp.execFileSync('/bin/sh',['-c',probe],{encoding:'utf8'}),'WAIT\n','Updater must wait until Premiere exits');
+  fs.writeFileSync(stub,'#!/bin/sh\nexit 1\n');
+  assert.notEqual(cp.spawnSync('/bin/sh',['-c',probe]).status,0,'Failed process queries must abort the updater');
+  console.log('PASS updater process guard: orphan helpers ignored, Premiere exit awaited, query errors abort');
+ }
  assert(!L.backupPath().startsWith(path.dirname(target)+path.sep),'Backups must be outside CEP discovery');
  L.updateStarted=false;manifest(L.backupPath());fs.writeFileSync(path.join(L.backupPath(),'old.txt'),'previous version');L.launchUpdate=()=>L.hasPendingUpdate().version;
  assert.equal(L.rollback(target),'previous');assert(fs.existsSync(path.join(L.hasPendingUpdate().stage,'old.txt')));
