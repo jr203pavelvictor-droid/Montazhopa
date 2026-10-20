@@ -47,6 +47,7 @@ jobs:
           node tests/iteration1.cjs
           node tests/frame-capture.cjs
           node tests/bridge.test.cjs
+          node tests/myinstants.test.cjs
           node tests/local.cjs
           node tests/core.test.cjs
           node tests/production-update.cjs
