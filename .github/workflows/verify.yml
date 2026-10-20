@@ -48,6 +48,7 @@ jobs:
           node tests/frame-capture.cjs
           node tests/bridge.test.cjs
           node tests/myinstants.test.cjs
+          node tests/logo-sounds.test.cjs
           node tests/local.cjs
           node tests/core.test.cjs
           node tests/production-update.cjs
