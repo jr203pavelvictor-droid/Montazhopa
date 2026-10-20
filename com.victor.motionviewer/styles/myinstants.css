@@ -23,3 +23,12 @@
 .mi-saved-heading{margin:12px 0 6px;font-size:13px}
 .mi-last{font-size:11px;line-height:1.5;color:var(--muted, #b1b7c0);overflow-wrap:anywhere;margin:3px 0 8px}
 @media(min-width:570px){.mi-result{grid-template-columns:minmax(0,1fr) auto;align-items:center}.mi-actions{flex-wrap:nowrap}}
+
+/* User-selected ALTO logo sounds. Uses the approved controls and typography. */
+.mi-logo-volume{display:flex;align-items:center;gap:10px;margin-top:7px}
+.mi-logo-volume input[type=range]{width:100%;min-width:0;flex:1}
+.mi-logo-volume output{width:42px;flex:0 0 42px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums}
+.mi-logo-list{display:grid;gap:7px;margin:12px 0}
+.mi-logo-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #ffffff21}
+.mi-logo-item span{flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px}
+.mi-logo-item button{flex:0 0 auto;font-size:10px;padding:6px 9px}
