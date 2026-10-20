@@ -1,0 +1,138 @@
+/* ALTO 4.0 — experimental graphite / light materials ported from user-approved design-preview/themes.css.
+   Real extension styles only. Keep existing Premiere handlers and panel geometry untouched. */
+:root[data-theme="dark"]{
+ color-scheme:dark;
+ --bg:#18191b;--panel:#2f3033;--card:#303135;--ink:#f1f1f2;--silver:#d7d7da;
+ --muted:#b2b3b8;--rim:#ffffff17;--surface:rgb(47 48 51 / .27);
+ --surface-hover:#ffffff0b;--focus:#80baff;
+ --alto-material:rgb(47 48 51 / .27);
+ --alto-reflection:linear-gradient(126deg,#ffffff0d,#ffffff02 42%,#ffffff04);
+ --alto-shadow:inset 0 1px 0 #ffffff20,inset 1px 0 0 #ffffff0b,inset 0 -1px 0 #ffffff08,0 9px 25px #00000033;
+ --alto-foreground:#f1f1f2;--alto-secondary:#b2b3b8;--alto-subtle:#8c8e94;
+ --alto-line:#ffffff17;--alto-field:#ffffff08;--alto-field-line:#ffffff13;
+ --alto-dock:#232427c9;--alto-selected:#45474b96;--alto-chips:#10111380;
+ --alto-menu:#28292dcc;--alto-modal:#27282bec;--alto-input-placeholder:#858890;
+ --alto-rim:linear-gradient(125deg,#ffffff36,#ffffff0b 25%,#ffffff08 60%,#ffffff1c);
+}
+:root[data-theme="light"]{
+ color-scheme:light;
+ --bg:#eaf0f1;--panel:#f4f7f9;--card:#e6edef;--ink:#222c38;--silver:#435264;
+ --muted:#617080;--rim:#65758a26;--surface:rgb(255 255 255 / .07);
+ --surface-hover:#ffffff66;--focus:#007aff;
+ --alto-material:rgb(255 255 255 / .07);
+ --alto-reflection:linear-gradient(126deg,#ffffff70,#ffffff15 42%,#ffffff39);
+ --alto-shadow:inset 0 1px 0 #fffffff2,inset 1px 0 0 #ffffffb3,inset -1px 0 0 #ffffff50,inset 0 -1px 0 #6b829323,0 9px 25px #4d647115,0 1px 3px #4258650c;
+ --alto-foreground:#222c38;--alto-secondary:#617080;--alto-subtle:#788595;
+ --alto-line:#65758a26;--alto-field:#ffffff50;--alto-field-line:#ffffffb0;
+ --alto-dock:#ffffff33;--alto-selected:#ffffffa3;--alto-chips:#8595a41b;
+ --alto-menu:#f2f6f8e8;--alto-modal:#f3f7f9ea;--alto-input-placeholder:#748595;
+ --alto-rim:linear-gradient(125deg,#ffffffed,#ffffff80 24%,#ffffff33 55%,#ffffffba);
+}
+body{color:var(--alto-foreground);transition:color .35s}
+/* Keep the document backdrop synchronous; only the inner glass and atmosphere layers crossfade. */
+html[data-theme] body{transition:none!important}
+/* ALTO's legacy panel also declares a body background. Bind themes explicitly at higher specificity. */
+html[data-theme="dark"] body{background-color:#18191b!important;background-image:none!important}
+html[data-theme="light"] body{background-color:#eaf0f1!important;background-image:none!important}
+.alto-atmosphere{background:radial-gradient(ellipse at 95% 50%,#34363a57,transparent 65%),linear-gradient(145deg,#1d1e21,#151618 55%,#202124)}
+.alto-atmosphere:before{content:"";position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .45s;background:radial-gradient(ellipse at 5% 3%,#e5f2f8 0,transparent 52%),radial-gradient(ellipse at 100% 49%,#d2e4e780,transparent 52%),radial-gradient(ellipse at 28% 96%,#f1ddd38f,transparent 50%),linear-gradient(143deg,#eff3f4,#e6edee 50%,#e9eced)}
+html[data-theme="light"] .alto-atmosphere:before{opacity:1}
+.ambient-ribbon{border-color:#ffffff06;box-shadow:inset 18px 5px 30px #ffffff04,21px 0 30px #00000020;transition:border-color .4s,box-shadow .4s}
+.ambient-ribbon.one{border-left-color:#b2b2b20b}.ambient-ribbon.two{border-right-color:#b2b2b209}
+html[data-theme="light"] .ambient-ribbon{border-color:#ffffff74;box-shadow:inset 18px 5px 30px #ffffff48,21px 0 30px #6a7b8710}
+html[data-theme="light"] .ambient-ribbon.one{border-left-color:#ffffff55}
+html[data-theme="light"] .ambient-ribbon.two{border-right-color:#ffffff66}
+.panel,.home-hero,.card,.command-row,.tool-row,.watch-row,.info-block,.modal-card,.audio-preview,.search-wrap,.view-actions,.camera-map,.camera-connect,.alto-dock,.navigation,.home-quick-grid button{
+ color:var(--alto-foreground);
+ background:var(--alto-reflection);
+ background-color:var(--alto-material);
+ background-clip:padding-box;
+ border-color:var(--alto-line);
+ box-shadow:var(--alto-shadow);
+ backdrop-filter:blur(19px) saturate(1.05);
+ -webkit-backdrop-filter:blur(19px) saturate(1.05);
+ transition:background-color .4s,color .35s,box-shadow .4s,border-color .4s;
+}
+html[data-theme="light"] .panel,html[data-theme="light"] .home-hero,html[data-theme="light"] .card,html[data-theme="light"] .command-row,html[data-theme="light"] .tool-row,html[data-theme="light"] .watch-row,html[data-theme="light"] .info-block,html[data-theme="light"] .modal-card,html[data-theme="light"] .audio-preview,html[data-theme="light"] .search-wrap,html[data-theme="light"] .view-actions,html[data-theme="light"] .camera-map,html[data-theme="light"] .camera-connect,html[data-theme="light"] .alto-dock,html[data-theme="light"] .navigation{
+ backdrop-filter:blur(24px) saturate(1.35);
+ -webkit-backdrop-filter:blur(24px) saturate(1.35);
+}
+.panel:before,.home-hero:before,.card:before,.modal-card:before{background:linear-gradient(151deg,#ffffff17,transparent 18% 84%,#ffffff03);opacity:.15}
+html[data-theme="light"] .panel:before,html[data-theme="light"] .home-hero:before,html[data-theme="light"] .card:before,html[data-theme="light"] .modal-card:before{background:linear-gradient(151deg,#ffffff99,transparent 18% 84%,#ffffff30);opacity:.22}
+/* Keep card text and category thumbnails readable in both skins. */
+.section-heading h2,.section-heading h3,.home-hero h2,.home-quick h3,.home-section h3,.panel h3,.card-caption strong,.command-copy strong,.tool-row strong,.settings-content h3,.flight-inspector h3,.audio-preview-header strong,.mi-info strong{color:var(--alto-foreground)}
+.eyebrow,.section-heading .eyebrow,.home-hero .eyebrow,.thumb .thumb-label,.camera-heading .eyebrow{color:var(--alto-secondary)}
+.card-caption small,.home-quick-grid small,.command-copy small,.home-recent summary,.help-text,.section-note,.file-caption,.camera-binding small,.stop-meta,.audio-note,.audio-range-field,.mi-path span,.mi-link,.mi-last{color:var(--alto-secondary)}
+.card,.thumb{border-color:var(--alto-line)}
+.grid .thumb,.grid:not(.large):not(.list) .thumb{background:radial-gradient(ellipse at 50% 28%,#ffffff09,#ffffff00 68%);border-bottom:1px solid var(--alto-line)}
+.thumb .sample-tile{background-color:var(--alto-material);border-color:var(--alto-line);box-shadow:inset 0 1px 3px #ffffff24,0 8px 8px #00000026}
+.card .fav{background:#2223263d;color:var(--alto-secondary)}
+html[data-theme="light"] .card .fav{background:#ffffff8c}
+.card:hover,.command-row:hover,.tool-row:hover,.home-quick-grid button:hover{background-color:var(--surface-hover);box-shadow:var(--alto-shadow),0 10px 22px #00000012}
+.home-hero p,.command-symbol,.section-note,.settings-content .panel .check,.setting-name{color:var(--alto-secondary)}
+.home-quick-grid svg{color:var(--alto-secondary)}
+.command-symbol{background:var(--alto-field);border-color:var(--alto-line)}
+.chips{background:var(--alto-chips);box-shadow:inset 0 1px 3px #00000016}
+.chips button{color:var(--alto-secondary)}
+.chips button.active{color:var(--alto-foreground);background:var(--alto-selected);box-shadow:inset 0 1px 0 #ffffff24,0 2px 5px #00000024}
+.navigation{background-color:var(--alto-menu)}
+.navigation button{color:var(--alto-foreground)}
+.navigation button:hover,.settings-nav button:hover{background:var(--surface-hover);color:var(--alto-foreground)}
+.navigation button.active{background:var(--alto-selected);color:var(--alto-foreground);box-shadow:inset 0 1px #ffffff24}
+.alto-dock{background:var(--alto-reflection);background-color:var(--alto-dock);backdrop-filter:blur(26px) saturate(1.05);-webkit-backdrop-filter:blur(26px) saturate(1.05);box-shadow:var(--alto-shadow),0 12px 30px #0000002b}
+.alto-dock button{color:var(--alto-secondary)}
+.alto-dock button.active{color:var(--alto-foreground);background:linear-gradient(145deg,#484a4fd9,#35373bc9);box-shadow:inset 0 1px 0 #ffffff19,0 2px 6px #00000029}
+html[data-theme="light"] .alto-dock{backdrop-filter:blur(32px) saturate(1.6);-webkit-backdrop-filter:blur(32px) saturate(1.6);box-shadow:var(--alto-shadow),0 12px 30px #526b7b26}
+html[data-theme="light"] .alto-dock button.active{background:linear-gradient(145deg,#ffffffd6,#ffffff73);color:#007aff;box-shadow:inset 0 1px 0 #fff,0 2px 8px #52708924}
+.statusbar{background:var(--alto-dock);color:var(--alto-secondary);border-top:1px solid var(--alto-line)}
+.header-actions .icon{color:var(--alto-foreground);background:var(--alto-reflection);border-color:var(--alto-line);box-shadow:var(--alto-shadow)}
+.header-actions .icon:hover{color:var(--alto-foreground);background:var(--surface-hover)}
+html[data-theme="light"] .brand-lettering{filter:brightness(.52) contrast(1.3)}
+html[data-theme="light"] .wordmark small{color:#647383}
+html[data-theme="light"] .brand-symbol{filter:drop-shadow(0 2px 2px #64738330)}
+input,select,textarea{background:var(--alto-field);color:var(--alto-foreground);border-color:var(--alto-field-line);box-shadow:inset 0 1px 2px #00000010}
+input::placeholder,textarea::placeholder{color:var(--alto-input-placeholder)}
+select option{background:#292a2e;color:#f1f1f2}
+html[data-theme="light"] select option{background:#f1f5f7;color:#263344}
+input[type=range]{background:linear-gradient(90deg,#0a84ff var(--range-progress,0%),#85899132 var(--range-progress,0%))}
+.primary,.apply{color:#fff;background:linear-gradient(160deg,#258fff,#0877ed);border-color:#6db4ff4d;box-shadow:inset 0 1px 0 #ffffff3d,0 5px 14px #00000026}
+.primary:hover,.apply:hover{color:#fff;background:linear-gradient(160deg,#379bff,#1685f6)}
+button:not(.primary):not(.apply):not(.icon):not(.wordmark):not(.card-hit):not(.fav):not(.mi-link):not(.mi-external){color:var(--alto-foreground)}
+.settings-nav button,.reference-link,.mi-external,.mi-link{color:var(--alto-secondary)}
+.settings-content .panel .check{border-color:var(--alto-line)}
+.camera-connect,.camera-heading,.marker,.stop-row{color:var(--alto-foreground)}
+.marker{background:#f6f8ffc9;color:#243349}
+.marker.selected{background:#0a84ff;color:#fff}
+.stop-row{background:var(--alto-field);border-color:var(--alto-line)}
+.stop-row.active{background:var(--alto-selected);border-color:var(--alto-line)}
+.stop-meta{color:var(--alto-secondary)}
+.flight-inspector h3{color:var(--alto-foreground)}
+.audio-preview,.modal-card{background-color:var(--alto-modal)}
+.modal{background:#08090b6b}
+html[data-theme="light"] .modal{background:#9cabb34d}
+.audio-canvas-wrap,.playbar,.silence-map{background:var(--alto-field)}
+.audio-controls button,.audio-preview button:not(.primary){color:var(--alto-foreground)}
+.mi-result{background:var(--alto-material);border-color:var(--alto-line);box-shadow:var(--alto-shadow)}
+.mi-search>input[type=search]{color:var(--alto-foreground)}
+.mi-logo-item{border-color:var(--alto-line)}
+/* Public test skin controls, not part of Premiere processing. */
+.alto-theme-toggle{width:62px!important;min-width:62px!important;height:37px!important;min-height:37px!important;flex:0 0 62px!important;border-radius:24px!important;display:flex!important;align-items:center;justify-content:space-between;padding:4px!important;gap:0!important;position:relative;cursor:pointer;background:var(--alto-reflection)!important;background-color:var(--alto-material)!important;border:1px solid var(--alto-line)!important;box-shadow:var(--alto-shadow)!important;color:var(--alto-foreground)!important}
+.alto-theme-toggle>span:not(.alto-theme-thumb){z-index:1;width:50%;display:grid;place-items:center}
+.alto-theme-toggle svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.alto-theme-thumb{pointer-events:none;position:absolute;left:4px;top:4px;bottom:4px;width:calc((100% - 8px)/2);border-radius:50%;background:#ffffff15;box-shadow:inset 0 1px 0 #ffffff28,0 1px 3px #0002;transition:transform .3s ease,background-color .3s}
+html[data-theme="light"] .alto-theme-thumb{transform:translateX(100%);background:#fff;box-shadow:inset 0 1px #fff,0 1px 4px #65798830}
+html[data-theme="light"] .alto-theme-toggle [data-alto-theme-icon="sun"]{color:#263b50}
+html[data-theme="dark"] .alto-theme-toggle [data-alto-theme-icon="sun"]{color:var(--alto-secondary)}
+.alto-theme-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:5px 0 8px}
+.alto-theme-choice button{display:flex;gap:9px;align-items:center;text-align:left;padding:10px;border:1px solid var(--alto-line);border-radius:16px;background:var(--alto-field);font-weight:600;font-size:10px;min-width:0}
+.alto-theme-choice button[aria-pressed="true"]{color:var(--alto-foreground);border-color:#aeb8c964;background:var(--alto-selected);box-shadow:inset 0 1px 0 #ffffff20}
+html[data-theme="light"] .alto-theme-choice button[aria-pressed="true"]{background:#ffffff90;border-color:#93aac14d;box-shadow:inset 0 1px #fff}
+.alto-theme-swatch{width:30px;height:32px;display:grid;place-items:center;flex:0 0 30px;border-radius:10px;box-shadow:inset 0 1px #ffffff4a,0 2px 5px #0002;font-size:17px}
+.alto-theme-swatch.graphite{background:linear-gradient(140deg,#4a4c50,#202124);color:#d4d6d9}
+.alto-theme-swatch.light{background:linear-gradient(140deg,#ffffff,#d7e8ed80);border:1px solid #ffffff99;color:#4f6f83}
+.alto-theme-notice{color:var(--alto-secondary);font-size:9px;line-height:1.55;margin-top:7px}
+@media(max-width:360px){.alto-theme-toggle{width:54px!important;min-width:54px!important;flex-basis:54px!important;height:32px!important;min-height:32px!important}.alto-theme-toggle svg{width:13px;height:13px}.header-actions{gap:5px}.alto-theme-choice button{padding:7px;gap:6px;font-size:9px}.alto-theme-swatch{width:25px;height:28px;flex-basis:25px}}
+html[data-theme="light"] .transparency-off .panel,html[data-theme="light"] .transparency-off .home-hero,html[data-theme="light"] .transparency-off .card,html[data-theme="light"] .transparency-off .alto-dock,html[data-theme="light"] .transparency-off .navigation{background:#f2f5f6;backdrop-filter:none;-webkit-backdrop-filter:none}
+.transparency-off .panel,.transparency-off .home-hero,.transparency-off .card,.transparency-off .alto-dock,.transparency-off .navigation{backdrop-filter:none;-webkit-backdrop-filter:none;background-color:#2b2c30}
+html[data-theme="light"] body.transparency-off .panel,html[data-theme="light"] body.transparency-off .home-hero,html[data-theme="light"] body.transparency-off .card,html[data-theme="light"] body.transparency-off .alto-dock,html[data-theme="light"] body.transparency-off .navigation{background:#f2f5f6}
+@media(prefers-reduced-motion:reduce){.alto-theme-thumb,.alto-atmosphere:before,.panel,.card,.home-hero{transition:none!important}}

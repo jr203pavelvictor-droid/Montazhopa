@@ -72,6 +72,7 @@ jobs:
           MZ_QA_DIR: test-results/ui
         run: |
           node tests/ui.cjs
+          node tests/alto-themes.cjs
           node tests/alto-ui.cjs
           node tests/myinstants-ui.cjs
           node tests/production-ui.cjs
