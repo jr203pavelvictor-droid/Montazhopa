@@ -48,7 +48,7 @@
       if (!link) continue;
       var href = attr(link[0], 'href');
       var title = decode(link[0].replace(/^<a\b[^>]*>/i, '').replace(/<\/a>[\s\S]*$/i, '').replace(/<[^>]*>/g, '').trim()).replace(/\s+/g, ' ').slice(0, 160);
-      var play = /\bplay\(\s*['"]([^'"]+\.mp3)['"]\s*\)/i.exec(segment);
+      var play = /\bplay\(\s*['"]([^'"]+\.mp3)['"]\s*\)/i.exec(decode(segment));
       if (!title || !play || !/^\/(?:en\/)?instant\/[^?#]+\/?$/.test(href)) continue;
       try {
         var mp3 = safeUrl(play[1], 'mp3');
@@ -106,7 +106,7 @@
   async function search(query) {
     var bytes = await requestBytes(searchUrl(query), 'search', MAX_HTML, 0);
     var data = parseResults(bytes.toString('utf8'));
-    if (!data.length) throw Error('No results found, or Myinstants changed its page layout');
+    if (!data.length) {var body=bytes.toString('utf8');if(/captcha|challenge-platform|cloudflare|access denied|just a moment/i.test(body))throw Error('Myinstants returned an access-check page instead of sound results');if(/class\s*=\s*["'][^"']*\binstant\b/i.test(body))throw Error('Myinstants results were received, but its sound markup could not be parsed');throw Error('No sounds found, or Myinstants returned a different page');}
     return data;
   }
   async function mp3(url) {return requestBytes(url, 'mp3', MAX_MP3, 0);}
