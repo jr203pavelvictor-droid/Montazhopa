@@ -811,7 +811,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=AltoTimeline;
 
 
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'4.0.0-beta.8',memory:{}};
+var MZ={version:'4.0.0-beta.9',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};
@@ -1187,6 +1187,7 @@ MZ.probeComponents=function(clip){
    var p=c.properties[j],row={name:String(p.displayName)};
    try{row.keys=!!p.areKeyframesSupported();}catch(e){row.keys=null;}
    try{row.animated=row.keys?!!p.isTimeVarying():false;}catch(e2){row.animated=null;}
+   if(row.animated){try{var ks=p.getKeys()||[];row.keyCount=ks.length;row.keySeconds=[];for(var q=0;q<ks.length&&q<8;q++)row.keySeconds.push(Math.round(VMV.seconds(ks[q])*1000)/1000);}catch(e3){}}
    props.push(row);
   }
   list.push({name:String(c.displayName),match:String(c.matchName),properties:props});
@@ -1198,7 +1199,7 @@ MZ.probeValue=function(v){
  return Math.round(Number(v)*10000)/10000;
 };
 MZ.apiProbe=function(){try{
- var r={ok:true,kind:'alto-api-probe',probeVersion:1,alto:MZ.version,app:{version:String(app.version||''),build:String(app.build||''),os:String($.os||''),engine:String($.version||''),locale:String($.locale||'')},notes:[]};
+ var r={ok:true,kind:'alto-api-probe',probeVersion:2,alto:MZ.version,app:{version:String(app.version||''),build:String(app.build||''),os:String($.os||''),engine:String($.version||''),locale:String($.locale||'')},notes:[]};
  var qeOk=false;try{app.enableQE();qeOk=typeof qe!=='undefined'&&!!qe.project;}catch(e){r.notes.push('QE: '+String(e.message||e));}
  r.app.qe=qeOk;
  r.api={project:MZ.probeObject(app.project,MZ.probeNames.project)};
@@ -1214,7 +1215,7 @@ MZ.apiProbe=function(){try{
  var targets=[];try{targets=VMV.getTargets(seq);}catch(e4){r.notes.push('No clip selected: clip checks skipped');}
  if(targets.length){
   var t=targets[0],clip=t.clip;
-  r.clip={name:t.name,track:'V'+(t.trackIndex+1),seconds:Math.round((t.end-t.start)*1000)/1000,adjustmentLayer:null,speed:null,components:MZ.probeComponents(clip)};
+  r.clip={name:t.name,track:'V'+(t.trackIndex+1),seconds:Math.round((t.end-t.start)*1000)/1000,start:Math.round(t.start*1000)/1000,inPoint:Math.round(VMV.seconds(clip.inPoint)*1000)/1000,playhead:Math.round(VMV.seconds(seq.getPlayerPosition())*1000)/1000,adjustmentLayer:null,speed:null,components:MZ.probeComponents(clip)};
   try{r.clip.adjustmentLayer=!!clip.isAdjustmentLayer();}catch(e5){}
   try{r.clip.speed=Number(clip.getSpeed());}catch(e6){}
   r.api.trackItem=MZ.probeObject(clip,MZ.probeNames.trackItem);
