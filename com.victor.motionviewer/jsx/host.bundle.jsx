@@ -811,7 +811,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=AltoTimeline;
 
 
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'4.0.0-beta.7',memory:{}};
+var MZ={version:'4.0.0-beta.8',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};
@@ -1256,15 +1256,24 @@ MZ.orderProbe=function(param,t0,t1,a,b){
  MZ.probeClear(param);
  VMV.checkResult(param.addKey(k0),'Key 1');VMV.checkResult(param.setValueAtKey(k0,a,true),'Value 1');param.setInterpolationTypeAtKey(k0,5,true);
  VMV.checkResult(param.addKey(k1),'Key 2');VMV.checkResult(param.setValueAtKey(k1,b,true),'Value 2');param.setInterpolationTypeAtKey(k1,5,true);
- out.perKeyOrder=MZ.probeValue(param.getValueAtTime(mid));
+ out.perKeyOrder=MZ.probeValue(param.getValueAtTime(mid));out.samples=MZ.probeSamples(param,t0,t1,a,b);
  param.setInterpolationTypeAtKey(k0,5,true);param.setInterpolationTypeAtKey(k1,5,true);
  out.afterAllKeys=MZ.probeValue(param.getValueAtTime(mid));
  return out;
 };
+/* Probe v3: normalized progress of a curve at 12.5/25/50/75/87.5 % of the span
+ * (first axis for vectors). Linear gives 0.125/0.25/0.5/0.75/0.875. */
+MZ.probeSamples=function(param,t0,t1,a,b){
+ var fr=[0.125,0.25,0.5,0.75,0.875],out=[],aa=(a&&typeof a==='object')?a[0]:a,bb=(b&&typeof b==='object')?b[0]:b;
+ for(var i=0;i<fr.length;i++){var v=param.getValueAtTime(VMV.time(t0+(t1-t0)*fr[i]));v=(v&&typeof v==='object')?v[0]:v;out.push(Math.round((Number(v)-aa)/(bb-aa)*10000)/10000);}
+ return out;
+};
 MZ.writeKeysProbe=function(param,sourceIn,span,a,b){
- var plan={sourceIn:sourceIn,sourceRate:1,interpolation:5};
- try{VMV.writeKeys(param,[[0,a],[span,b]],plan);return {ok:true,at25:MZ.probeValue(param.getValueAtTime(VMV.time(sourceIn+span*0.25)))};}
- catch(e){var row={ok:false,error:String(e.message||e)};try{row.at25=MZ.probeValue(param.getValueAtTime(VMV.time(sourceIn+span*0.25)));}catch(ignored){}return row;}
+ var plan={sourceIn:sourceIn,sourceRate:1,interpolation:5},row;
+ try{VMV.writeKeys(param,[[0,a],[span,b]],plan);row={ok:true};}
+ catch(e){row={ok:false,error:String(e.message||e)};}
+ try{row.samples=MZ.probeSamples(param,sourceIn,sourceIn+span,a,b);}catch(ignored){}
+ return row;
 };
 /* Visible check: a 2-key Bezier punch-in on Motion Scale of the selected clip
  * at the playhead (100% -> 118% over 0.4 s). It stays on the clip. */
@@ -1282,10 +1291,10 @@ MZ.zoomPreview=function(){try{
  VMV.checkResult(scale.addKey(k0),'Key 1');VMV.checkResult(scale.addKey(k1),'Key 2');
  VMV.checkResult(scale.setValueAtKey(k0,base,true),'Value 1');VMV.checkResult(scale.setValueAtKey(k1,base*1.18,true),'Value 2');
  VMV.checkResult(scale.setInterpolationTypeAtKey(k0,5,true),'Ease 1');VMV.checkResult(scale.setInterpolationTypeAtKey(k1,5,true),'Ease 2');
- return VMV.encode({ok:true,kind:'alto-zoom-preview',clip:t.name,atSeconds:Math.round((t.start+offset)*1000)/1000,from:base,to:Math.round(base*118)/100,keys:(scale.getKeys()||[]).length,at25:MZ.probeValue(scale.getValueAtTime(VMV.time(sourceIn+(offset+0.1)*rate)))});
+ return VMV.encode({ok:true,kind:'alto-zoom-preview',clip:t.name,atSeconds:Math.round((t.start+offset)*1000)/1000,from:base,to:Math.round(base*118)/100,keys:(scale.getKeys()||[]).length,at25:MZ.probeValue(scale.getValueAtTime(VMV.time(sourceIn+(offset+0.1)*rate))),samples:MZ.probeSamples(scale,sourceIn+offset*rate,sourceIn+(offset+0.4)*rate,base,base*1.18)});
 }catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0});}};
 MZ.easingProbe=function(){
- var seq=app.project.activeSequence,records=[],r={ok:true,kind:'alto-easing-probe',probeVersion:2,notes:[]},touched=[],t;
+ var seq=app.project.activeSequence,records=[],r={ok:true,kind:'alto-easing-probe',probeVersion:3,notes:[]},touched=[],t;
  try{
   var targets=VMV.getTargets(seq);if(targets.length!==1)throw Error('Select exactly one video clip for the key test');
   t=targets[0];var clip=t.clip,motion=null;

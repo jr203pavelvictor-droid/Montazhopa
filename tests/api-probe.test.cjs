@@ -45,7 +45,7 @@ test('A failure while writing keys restores Motion before reporting',()=>{
 });
 test('Key test v2 compares key orders and runs the real ALTO key writer',()=>{
  const f=fixture(),r=JSON.parse(f.ctx.MZ.easingProbe());
- assert(r.ok,r.error);assert.equal(r.probeVersion,2);
+ assert(r.ok,r.error);assert.equal(r.probeVersion,3);
  approx(r.order.scale.afterAllKeys,115.625,1e-3);assert(r.altoWriteKeys.scale.ok,r.altoWriteKeys.scale.error);assert(r.altoWriteKeys.position.ok,r.altoWriteKeys.position.error);
  assert.equal(r.motionRestored,true);assert.equal(motion(f).properties[1].isTimeVarying(),false);assert.equal(motion(f).properties[1].getValue(),100);
 });
