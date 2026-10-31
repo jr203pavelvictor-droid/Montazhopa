@@ -49,6 +49,8 @@ jobs:
           node tests/bridge.test.cjs
           node tests/myinstants.test.cjs
           node tests/media-downloader.test.cjs
+          node tests/memes.test.cjs
+          node tests/memes-ui.cjs
           node tests/api-probe.test.cjs
           node tests/local.cjs
           node tests/core.test.cjs

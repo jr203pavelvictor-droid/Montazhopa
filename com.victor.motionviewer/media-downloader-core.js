@@ -114,11 +114,22 @@
     return {title:String(data.title||'Untitled').slice(0,230),id:String(data.id||''),extractor:String(data.extractor_key||data.extractor||''),
       duration:Number(data.duration)||0,thumbnail:String(data.thumbnail||''),formats:(Array.isArray(data.formats)?data.formats:[]).slice(-500).map(function(f){return {id:String(f.format_id||''),ext:String(f.ext||''),height:Number(f.height)||0,fps:Number(f.fps)||0,vcodec:String(f.vcodec||''),acodec:String(f.acodec||''),note:String(f.format_note||'')};})};
   }
+  // YouTube search through yt-dlp itself (ytsearchN:), no API key. Flat results only:
+  // nothing is downloaded until the user picks a clip.
+  async function search(query,limit,config){
+    var q=String(query||'').replace(/[\r\n]+/g,' ').trim();if(!q||q.length>100)throw Error('Запрос должен быть от 1 до 100 символов');
+    var n=Math.max(1,Math.min(30,Math.floor(Number(limit)||12)));
+    var result=await spawn(['--ignore-config','--no-warnings','--flat-playlist','--dump-single-json','--','ytsearch'+n+':'+q],config);
+    var data=JSON.parse(result.stdout),entries=Array.isArray(data.entries)?data.entries:[];
+    return entries.filter(function(e){return e&&/^[A-Za-z0-9_-]{11}$/.test(String(e.id||''));}).map(function(e){return {id:String(e.id),title:String(e.title||'Untitled').slice(0,200),duration:Number(e.duration)||0,channel:String(e.channel||e.uploader||'').slice(0,80),url:'https://www.youtube.com/watch?v='+e.id,thumb:'https://i.ytimg.com/vi/'+e.id+'/mqdefault.jpg'};});
+  }
   function buildArgs(address,folder,options){
     options=options||{};ensureDir(folder);
     var args=['--ignore-config','--no-warnings','--newline','--no-overwrites', '--windows-filenames', '--no-mtime'];
     if(!options.playlist)args.push('--no-playlist');
     var mode=options.mode||'best',ffmpeg=findFfmpeg(options);
+    // A piece of a longer clip (meme inserts): yt-dlp cuts it with FFmpeg.
+    if(options.section){var a=Number(options.section.start),b=Number(options.section.end);if(!(isFinite(a)&&isFinite(b)&&a>=0&&b>a&&b-a<=600))throw Error('Неверный отрезок');if(!ffmpeg)throw Error('Чтобы вырезать кусок ролика, нужен FFmpeg.');args.push('--download-sections','*'+a.toFixed(2)+'-'+b.toFixed(2),'--force-keyframes-at-cuts');}
     if(options.ffmpeg&&!fs.existsSync(options.ffmpeg))throw Error('FFmpeg не найден: '+options.ffmpeg);
     if(ffmpeg){
       if(mode==='audio')args.push('-f','bestaudio/best','-x','--audio-format',options.audioFormat||'mp3');
@@ -288,5 +299,5 @@
     throw Error('yt-dlp завершился, но файл не обнаружен в '+folder+'. '+details.join(' · ')+'. Проверь папку в Проводнике.');
   }
   function cancel(){if(running){try{running.kill();}catch(_){}return true;}return false;}
-  return {inspect:inspect,download:download,install:install,version:version,cancel:cancel,managedPath:managedPath,resolveEngine:resolveEngine,buildArgs:buildArgs,findFfmpeg:findFfmpeg};
+  return {inspect:inspect,search:search,download:download,install:install,version:version,cancel:cancel,managedPath:managedPath,resolveEngine:resolveEngine,buildArgs:buildArgs,findFfmpeg:findFfmpeg};
 });

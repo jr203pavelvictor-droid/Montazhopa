@@ -48,3 +48,15 @@ html[data-theme=light] .preset-preview{background-color:#eef3f5f2!important}
 /* Meme sounds: Play / Download / To timeline wrap on narrow panels. */
 #main .mi-actions{flex-wrap:wrap!important}
 #main .mi-actions>button{flex:1 1 90px!important;min-width:0!important}
+/* Memes */
+.meme-tabs,.meme-sources{margin-bottom:8px}
+.meme-search .chips{margin:8px 0 6px}
+.meme-key input{width:100%;box-sizing:border-box;margin:6px 0}
+.meme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;margin-top:8px}
+.meme-card{display:flex;flex-direction:column;gap:5px;padding:6px;border-radius:12px;background:var(--alto-field,#ffffff08);border:1px solid var(--alto-line,#ffffff14);min-width:0}
+.meme-media{position:relative;aspect-ratio:16/9;border-radius:9px;overflow:hidden;background:#000;cursor:pointer}
+.meme-media video,.meme-media img{width:100%;height:100%;object-fit:cover;display:block}
+.meme-duration{position:absolute;right:5px;bottom:5px;font-size:9px;padding:1px 5px;border-radius:5px;background:#000b;color:#fff}
+.meme-title{font-size:10px;line-height:1.25;margin:0;max-height:2.5em;overflow:hidden;overflow-wrap:anywhere}
+.meme-actions{display:flex;gap:5px}#main .meme-actions .apply{flex:1;min-height:30px;font-size:10px;margin:0!important;padding:4px 6px}#main .meme-actions button:not(.apply){min-width:34px;min-height:30px;margin:0}
+.meme-credit{font-size:9px;opacity:.6;text-align:right;margin:6px 2px}

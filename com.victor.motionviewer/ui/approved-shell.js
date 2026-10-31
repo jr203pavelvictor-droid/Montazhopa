@@ -11,7 +11,7 @@
   if(U.state.screen==='camera'){const apply=document.querySelector('.camera-apply');if(apply){const footer=U.el('div','camera-action-footer');footer.id='camera-action-footer';apply.disabled=!!U.state.busy;footer.append(apply);document.body.append(footer);}}
   let dock=U.$('alto-dock');if(!dock){dock=U.el('nav','alto-dock');dock.id='alto-dock';dock.setAttribute('aria-label',U.t('Основная навигация','Main navigation'));document.body.append(dock);}
   dock.replaceChildren();// Settings live in the header gear; the dock holds the five working sections.
-  const entries=[['home','Главная','Home','grid',()=>A.navigate('home')],['motion','Движение','Motion','motion',()=>A.navigate('motion')],['camera','Motion Zoom','Motion Zoom','camera',()=>A.openTool('camera')],['sounds','Звуки','Sounds','sound',()=>A.navigate('sounds')],['assets','Материалы','Media','assets',()=>A.navigate('assets')]];
+  const entries=[['home','Главная','Home','grid',()=>A.navigate('home')],['motion','Движение','Motion','motion',()=>A.navigate('motion')],['camera','Zoom','Zoom','camera',()=>A.openTool('camera')],['memes','Мемы','Memes','meme',()=>A.navigate('memes')],['sounds','Звуки','Sounds','sound',()=>A.navigate('sounds')],['assets','Материалы','Media','assets',()=>A.navigate('assets')]];
   for(const [key,ru,en,glyph,run]of entries){const b=U.button('',run);b.innerHTML=A.svg(glyph);b.append(U.el('span','',U.t(ru,en)));b.dataset.dock=key;const screen=U.state.screen,active=key==='camera'?screen==='camera':key==='home'?screen==='home':U.state.section===key&&screen!=='camera'&&screen!=='settings'&&screen!=='home';b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false');dock.append(b);}
  }};
 })();

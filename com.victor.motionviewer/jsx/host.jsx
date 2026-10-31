@@ -3,7 +3,7 @@
 #include "../engine.js"
 #include "../timeline-model.js"
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'4.0.0-beta.15',memory:{}};
+var MZ={version:'4.0.0-beta.16',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};
@@ -109,6 +109,27 @@ MZ.addTransition=function(name){try{var seq=app.project.activeSequence;if(!seq)t
  item.addTransition(transition);var after=before>=0?track.transitions.numItems:-1;if(before>=0&&after<=before)throw Error('MZ_TRANSITION_NOT_ADDED');
  return VMV.encode({ok:true,name:String(name),verified:before>=0});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.presetList=function(){try{var out=[],fields=['scale','sx','sy','x','y','rotation','opacity','shadow'];for(var id in VMV.presetData){if(!VMV.presetData.hasOwnProperty(id))continue;var p=VMV.presetData[id],row={id:id,group:p.group,num:p.num,title:p.title,description:p.description||'',duration:p.duration};for(var f=0;f<fields.length;f++)if(p[fields[f]])row[fields[f]]=p[fields[f]];out.push(row);}return VMV.encode({ok:true,presets:out});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
+// Meme inserts: one track index k (from the preferred video track up) where the video
+// track is free and, for clips with sound, the audio track too. Sequence.overwriteClip
+// takes explicit video and audio indices; the older Track.overwriteClip keeps them equal.
+MZ.memeTracks=function(seq,v,a,start,end,hasAudio){
+ var vi=MZ.freeTrack(seq.videoTracks,v,start,end);if(vi<0)throw Error('MZ_TRACK_OCCUPIED');if(!hasAudio)return {v:vi,a:-1};
+ if(seq.overwriteClip){var ai=MZ.freeTrack(seq.audioTracks,a,start,end);if(ai<0)throw Error('MZ_TRACK_OCCUPIED');return {v:vi,a:ai};}
+ for(var k=vi;k<Math.min(seq.videoTracks.numTracks,seq.audioTracks.numTracks);k++)if(MZ.freeTrack(seq.videoTracks,k,start,end)===k&&MZ.freeTrack(seq.audioTracks,k,start,end)===k)return {v:k,a:k};
+ throw Error('MZ_TRACK_OCCUPIED');
+};
+MZ.insertMeme=function(path,videoTrack,audioTrack,hasAudio,fit){try{
+ var seq=app.project.activeSequence;if(!seq)throw Error('Open a sequence');var f=new File(path);if(!f.exists)throw Error('Media is missing');
+ var v=Number(videoTrack),a=Number(audioTrack);if(!(v>=0&&v<seq.videoTracks.numTracks))v=0;if(!(a>=0&&a<seq.audioTracks.numTracks))a=0;
+ var bin=MZ.findBin('Montazhopa / Memes');if(!app.project.importFiles([f.fsName],true,bin,false))throw Error('Import failed');
+ var item=null,i;for(i=0;i<bin.children.numItems;i++){var c=bin.children[i];try{if(c.getMediaPath()===f.fsName)item=c;}catch(ignored){}}if(!item)throw Error('Imported item not found');
+ var at=seq.getPlayerPosition(),start=VMV.seconds(at),dur=VMV.seconds(item.getOutPoint(1))-VMV.seconds(item.getInPoint(1));if(!isFinite(dur)||dur<=0)throw Error('Cannot read media duration');
+ var t=MZ.memeTracks(seq,v,a,start,start+dur,!!hasAudio);
+ if(hasAudio&&seq.overwriteClip)seq.overwriteClip(item,at,t.v,t.a);else seq.videoTracks[t.v].overwriteClip(item,String(start));
+ var placed=null,clips=seq.videoTracks[t.v].clips;for(i=0;i<clips.numItems;i++){var p=clips[i];if(Math.abs(VMV.seconds(p.start)-start)<.01&&p.projectItem&&p.projectItem.getMediaPath&&p.projectItem.getMediaPath()===f.fsName)placed=p;}
+ if(!placed)throw Error('MZ_MEME_NOT_PLACED');if(fit!==false&&placed.setScaleToFrameSize)placed.setScaleToFrameSize();
+ return VMV.encode({ok:true,video:t.v+1,audio:t.a+1,seconds:dur});
+}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.findBin=function(name,parent){parent=parent||app.project.rootItem;for(var i=0;i<parent.children.numItems;i++){var c=parent.children[i];if(c.type===2&&c.name===name)return c;}return parent.createBin(name);};
 MZ.importFiles=function(paths,binName){try{if(!(paths instanceof Array)||paths.length>200)throw Error('Select up to 200 files');var clean=[];for(var i=0;i<paths.length;i++){var f=new File(paths[i]);if(!f.exists)throw Error('File missing: '+f.name);if(!/\.(mp4|mov|mxf|avi|mkv|wav|mp3|aif|aiff|aac|m4a|png|jpg|jpeg|webp|psd|tif|tiff)$/i.test(f.name))throw Error('Unsupported media: '+f.name);clean.push(f.fsName);}var bin=MZ.findBin(binName||'Montazhopa');var ok=app.project.importFiles(clean,true,bin,false);if(!ok)throw Error('Premiere rejected import');return VMV.encode({ok:true,count:clean.length});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.insertMedia=function(path,trackIndex,isAudio){try{var seq=app.project.activeSequence;if(!seq)throw Error('Open a sequence');var f=new File(path);if(!f.exists)throw Error('Media is missing');trackIndex=Number(trackIndex);var tracks=isAudio?seq.audioTracks:seq.videoTracks;if(trackIndex<0||trackIndex>=tracks.numTracks||Math.floor(trackIndex)!==trackIndex)throw Error('Track does not exist');var bin=MZ.findBin('Montazhopa / Media'),before=bin.children.numItems;if(!app.project.importFiles([f.fsName],true,bin,false))throw Error('Import failed');var item=null;for(var i=0;i<bin.children.numItems;i++){var c=bin.children[i];try{if(c.getMediaPath()===f.fsName)item=c;}catch(ignored){}}if(!item)throw Error('Imported item not found');var at=seq.getPlayerPosition(),start=VMV.seconds(at),end=VMV.seconds(item.getOutPoint(isAudio?2:1))-VMV.seconds(item.getInPoint(isAudio?2:1));if(!isFinite(end)||end<=0)throw Error('Cannot read media duration');var free=MZ.freeTrack(tracks,trackIndex,start,start+end);if(free<0)throw Error('MZ_TRACK_OCCUPIED');tracks[free].overwriteClip(item,String(start));return VMV.encode({ok:true,track:free+1,moved:free!==trackIndex});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
@@ -144,7 +165,7 @@ MZ.applyCamera=function(request){var seq=null,records=[],backup=null,component=n
 #include "api-probe.jsx"
 
 MZ.health=function(){try{
- var required={"MZ.bindFocusTargets":MZ.bindFocusTargets,"MZ.inspectProject":MZ.inspectProject,"MZ.audioDestination":MZ.audioDestination,"MZ.insertAudioRange":MZ.insertAudioRange,"MZ.captureTimelineFrame":MZ.captureTimelineFrame,"MZ.pollTimelineFrame":MZ.pollTimelineFrame,"MZ.discardTimelineFrame":MZ.discardTimelineFrame,"MZ.selection":MZ.selection,"MZ.apply":MZ.apply,"MZ.projectContext":MZ.projectContext,"MZ.importInterchange":MZ.importInterchange,"VMV.diagnostics":VMV.diagnostics,"MZ.apiProbe":MZ.apiProbe,"MZ.easingProbe":MZ.easingProbe,"MZ.zoomPreview":MZ.zoomPreview,"MZ.applyCamera":MZ.applyCamera,"MZ.cameraMarkers":MZ.cameraMarkers,"MZ.presetList":MZ.presetList,"MZ.transitionNames":MZ.transitionNames,"MZ.addTransition":MZ.addTransition,"VMV.applyById":VMV.applyById,"VMV.getTargets":VMV.getTargets},names=[];
+ var required={"MZ.bindFocusTargets":MZ.bindFocusTargets,"MZ.inspectProject":MZ.inspectProject,"MZ.audioDestination":MZ.audioDestination,"MZ.insertAudioRange":MZ.insertAudioRange,"MZ.captureTimelineFrame":MZ.captureTimelineFrame,"MZ.pollTimelineFrame":MZ.pollTimelineFrame,"MZ.discardTimelineFrame":MZ.discardTimelineFrame,"MZ.selection":MZ.selection,"MZ.apply":MZ.apply,"MZ.projectContext":MZ.projectContext,"MZ.importInterchange":MZ.importInterchange,"VMV.diagnostics":VMV.diagnostics,"MZ.apiProbe":MZ.apiProbe,"MZ.easingProbe":MZ.easingProbe,"MZ.zoomPreview":MZ.zoomPreview,"MZ.applyCamera":MZ.applyCamera,"MZ.cameraMarkers":MZ.cameraMarkers,"MZ.presetList":MZ.presetList,"MZ.insertMeme":MZ.insertMeme,"MZ.transitionNames":MZ.transitionNames,"MZ.addTransition":MZ.addTransition,"VMV.applyById":VMV.applyById,"VMV.getTargets":VMV.getTargets},names=[];
  for(var key in required){if(required.hasOwnProperty(key)){if(typeof required[key]!=="function")throw Error("Missing JSX method: "+key);names.push(key);}}
  return VMV.encode({ok:true,version:MZ.version,engine:"ExtendScript",methods:names});
 }catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0,fileName:String(e.fileName||"")});}};

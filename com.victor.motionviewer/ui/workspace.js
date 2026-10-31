@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   let U, A, activeKey = '', previousContext = '', timer, writing = false;
-  const sections = ['home','motion','assets','sounds','tools','automation'];
+  const sections = ['home','motion','assets','sounds','memes','tools','automation'];
   const empty = () => ({schema:1, pins:[], recent:[], scroll:{}, drafts:{}, context:{}});
   let data = empty();
   function persist() {
@@ -39,7 +39,7 @@
     window.AltoSurfaces.refresh();
     activeKey=key();U.$('main').scrollTop=Number(data.scroll[activeKey])||0;
     const s=U.state;
-    const names={home:U.t('Главная','Home'),motion:U.t('Движение','Motion'),assets:U.t('Мои материалы','My media'),sounds:U.t('Звук','Sounds'),tools:U.t('Инструменты','Tools'),automation:U.t('Сценарии','Workflows')};
+    const names={home:U.t('Главная','Home'),memes:U.t('Мемы','Memes'),motion:U.t('Движение','Motion'),assets:U.t('Мои материалы','My media'),sounds:U.t('Звук','Sounds'),tools:U.t('Инструменты','Tools'),automation:U.t('Сценарии','Workflows')};
     const label=s.query.trim()?U.t('Поиск','Search'):s.screen==='settings'?U.t('Настройки','Settings'):s.screen==='camera'?'Motion Zoom':s.screen==='detail'?(window.MZCatalog.find(x=>x.id===s.selected)||{}).title:s.screen==='favorites'?U.t('Избранное','Favorites'):names[s.section];
     U.$('context-label').textContent=label||names[s.section]||'ALTO';
     document.title='ALTO 4.0 · '+U.$('context-label').textContent;
@@ -87,7 +87,7 @@
     // The decorative hero block was removed: the dock already opens Motion, and the space goes to tools.
     void hero;void logo;void title;
     const quick=U.el('section','home-quick');quick.append(U.el('h3','',U.t('Быстрые инструменты','Quick tools')));const grid=U.el('div','home-quick-grid');
-    for(const [id,name,en,desc,enDesc,glyph]of [['camera','Motion Zoom','Motion Zoom','Камера по словам в кадре','Camera across the frame','camera'],['cut','Убрать тишину','Remove pauses','Черновой монтаж','Rough cut','beat'],['captions','Субтитры и повторы','Captions and retakes','Речь → SRT','Speech → SRT','native'],['sync','Синхронизация звука','Audio alignment','Две записи · один сдвиг','Two recordings · one offset','sound']]){const button=U.button('',()=>{if(id==='camera')A.openTool('camera');else{A.navigate('tools');A.openWorkflow(id);}});button.innerHTML=A.svg(glyph);button.append(U.el('strong','',U.t(name,en)),U.el('small','',U.t(desc,enDesc)));grid.append(button);}quick.append(grid);m.append(quick);
+    for(const [id,name,en,desc,enDesc,glyph]of [['memes','Мемы','Memes','Вставки и звуки по эмоции','Inserts and sounds by emotion','meme'],['camera','Motion Zoom','Motion Zoom','Камера по словам в кадре','Camera across the frame','camera'],['cut','Убрать тишину','Remove pauses','Черновой монтаж','Rough cut','beat'],['captions','Субтитры и повторы','Captions and retakes','Речь → SRT','Speech → SRT','native'],['sync','Синхронизация звука','Audio alignment','Две записи · один сдвиг','Two recordings · one offset','sound']]){const button=U.button('',()=>{if(id==='camera')A.openTool('camera');else if(id==='memes')A.navigate('memes');else{A.navigate('tools');A.openWorkflow(id);}});button.innerHTML=A.svg(glyph);button.append(U.el('strong','',U.t(name,en)),U.el('small','',U.t(desc,enDesc)));grid.append(button);}quick.append(grid);m.append(quick);
     const all=items(),columns=U.el('div','home-columns'),pinned=U.el('section','home-section'),recent=U.el('details','home-section home-recent');
     const ph=heading('Избранное','Favorites');ph.append(U.button(U.t('Все инструменты','All tools'),()=>A.navigate('tools'),'reference-link'));pinned.append(ph);
     const picks=data.pins.map(id=>all.find(x=>x.id===id)).filter(Boolean).concat(all.filter(x=>x.type!=='tool'&&x.type!=='macro'&&isPinned(x)));for(const x of picks.slice(0,8))pinned.append(row(x));
