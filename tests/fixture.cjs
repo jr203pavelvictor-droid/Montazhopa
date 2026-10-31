@@ -13,7 +13,7 @@ class Param{
   if(!this.varying||!this.keys.size)return clone(this.value);
   const times=[...this.keys.keys()].map(Number).sort((a,b)=>a-b),at=Number(t.ticks);
   if(at<=times[0])return clone(this.keys.get(String(times[0])));if(at>=times.at(-1))return clone(this.keys.get(String(times.at(-1))));
-  for(let i=1;i<times.length;i++)if(at<=times[i]){let u=(at-times[i-1])/(times[i]-times[i-1]);if(this.interp.get(String(times[i-1]))===5&&!this.options.ignoreInterpolation)u=u*u*(3-2*u);const a=this.keys.get(String(times[i-1])),b=this.keys.get(String(times[i]));return Array.isArray(a)?a.map((v,j)=>v+(b[j]-v)*u):a+(b-a)*u;}
+  for(let i=1;i<times.length;i++)if(at<=times[i]){let u=(at-times[i-1])/(times[i]-times[i-1]);if([3,5].includes(this.interp.get(String(times[i-1])))&&!this.options.ignoreInterpolation)u=u*u*(3-2*u);const a=this.keys.get(String(times[i-1])),b=this.keys.get(String(times[i]));return Array.isArray(a)?a.map((v,j)=>v+(b[j]-v)*u):a+(b-a)*u;}
  }
  areKeyframesSupported(){return true;} isTimeVarying(){return this.varying;}
  setTimeVarying(v){this.varying=v;if(v)this.keys.set(new Time(99).ticks,clone(this.value));return 0;}

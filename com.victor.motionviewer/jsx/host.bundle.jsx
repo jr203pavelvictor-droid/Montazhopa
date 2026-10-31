@@ -415,7 +415,7 @@ VMV.writeKeys = function (param, entries, plan) {
         var time = VMV.time(seconds);
         VMV.checkResult(param.addKey(time), 'Добавление ключа');
         VMV.checkResult(param.setValueAtKey(time, entries[i][1], true), 'Запись ключа ' + (i+1));
-        VMV.checkResult(param.setInterpolationTypeAtKey(time, plan.interpolation || 0, true), 'Интерполяция ключа');
+        if (!plan.pair) VMV.checkResult(param.setInterpolationTypeAtKey(time, plan.interpolation || 0, true), 'Интерполяция ключа');
         var written = param.getKeys(), found = false;
         if (written) for (var w=0;w<written.length;w++) if (String(written[w].ticks)===String(time.ticks)) found=true;
         if (!found || !VMV.closeValue(param.getValueAtKey(time),entries[i][1])) throw new Error('Premiere не подтвердил ключ '+(i+1)+': '+param.displayName);
@@ -426,6 +426,8 @@ VMV.writeKeys = function (param, entries, plan) {
         !VMV.closeValue(param.getValueAtKey(lastTime), entries[entries.length - 1][1])) {
         throw new Error('Premiere не подтвердил записанные значения ключей.');
     }
+    // Native pairs: values first, then per-key codes, as measured by the API check.
+    if (plan.pair) for (i = 0; i < entries.length; i++) VMV.checkResult(param.setInterpolationTypeAtKey(VMV.time(plan.sourceIn + entries[i][0] * plan.sourceRate), plan.pair[i], true), 'Интерполяция ключа');
     var confirmed=param.getKeys(), lookup={};
     if (!param.isTimeVarying() || !confirmed || confirmed.length!==entries.length) {
         throw new Error('Premiere не сохранил все ключи: ожидалось '+entries.length+', найдено '+(confirmed?confirmed.length:0)+'. Параметр: '+param.displayName);
@@ -464,6 +466,40 @@ VMV.verifyBezier = function(param,entries,plan) {
     }
     if(!changed)throw Error('MZ_BEZIER_NOT_SMOOTH');
 };
+// Smooth scalar animation as two native keys. PPRO 26.5.2: interpolation code 3
+// on the first key draws smoothstep, at the clip start and mid-clip (API check,
+// probe v4). The curve is measured after writing; any mismatch falls back to the
+// exact sampled keys, so a different Premiere build can never get a wrong shape.
+VMV.SMOOTH_PAIR=[3,3];
+VMV.pairShape=function(entries,kind){
+    var a=entries[0],b=entries[entries.length-1],span=b[0]-a[0];
+    if(!kind||entries.length<2||!(span>0)||a[1] instanceof Array||typeof a[1]!=='number'||typeof b[1]!=='number')return false;
+    var delta=b[1]-a[1],limit=Math.max(.000001,Math.abs(delta)*.002);if(Math.abs(delta)<.00000001)return false;
+    for(var i=0;i<entries.length;i++)if(Math.abs(entries[i][1]-(a[1]+delta*MZEngine.ease((entries[i][0]-a[0])/span,kind,.5)))>limit)return false;
+    return true;
+};
+VMV.pairError=function(param,first,last,kind,plan){
+    var fractions=[.125,.25,.5,.75,.875],delta=last[1]-first[1],worst=0,previous=0;
+    for(var i=0;i<fractions.length;i++){
+        var at=plan.sourceIn+(first[0]+(last[0]-first[0])*fractions[i])*plan.sourceRate,p=(Number(param.getValueAtTime(VMV.time(at)))-first[1])/delta;
+        if(!isFinite(p)||p<previous-.0001||p<-.0001||p>1.0001)return 1;
+        previous=p;worst=Math.max(worst,Math.abs(p-MZEngine.ease(fractions[i],kind,.5)));
+    }
+    return worst;
+};
+VMV.writeEasedPair=function(param,entries,plan,index){
+    if(!plan.ease||typeof param.getValueAtTime!=='function'||!VMV.pairShape(entries,plan.ease))return false;
+    var first=entries[0],last=entries[entries.length-1],codes=VMV.SMOOTH_PAIR;
+    try{
+        VMV.writeKeys(param,[first,last],{sourceIn:plan.sourceIn,sourceRate:plan.sourceRate,pair:codes});
+        var error=VMV.pairError(param,first,last,plan.ease,plan);
+        plan.pairChecks=plan.pairChecks||[];plan.pairChecks.push({index:index,error:Math.round(error*10000)/10000});
+        if(error>.03)return false;
+    }catch(e){plan.pairChecks=plan.pairChecks||[];plan.pairChecks.push({index:index,error:String(e.message||e)});return false;}
+    plan.verifiedKeys=(plan.verifiedKeys||0)+2;plan.keyInterp=plan.keyInterp||{};plan.keyInterp[index]=[codes[0],codes[1]];
+    return true;
+};
+VMV.writeSmooth=function(param,entries,plan,index){if(!VMV.writeEasedPair(param,entries,plan,index))VMV.writeKeys(param,entries,plan);};
 VMV.makePlan = function (seq, target, spec) {
     var clip = VMV.publicClip(seq, target);
     var duration = target.end - target.start;
@@ -511,11 +547,11 @@ VMV.configureTransform = function (component, spec, plan) {
     VMV.setStatic(compShutter,false); VMV.setStatic(shutter,typeof spec.shutter==='number'?spec.shutter:180);
     if(!VMV.closeValue(shutter.getValue(),typeof spec.shutter==='number'?spec.shutter:180)) throw new Error('Premiere не подтвердил Shutter Angle.');
     VMV.setStatic(uniform,!(spec.sx || spec.sy));
-    if (spec.sy || spec.scale) VMV.writeOrStatic(height,VMV.entries(spec.sy || spec.scale,plan),plan);
+    if (spec.sy || spec.scale) VMV.writeOrStatic(height,VMV.entries(spec.sy || spec.scale,plan),plan,3);
     // With uniform scaling enabled, the height/Scale parameter drives both axes.
-    if (spec.sx || spec.sy) VMV.writeOrStatic(width,VMV.entries(spec.sx || spec.scale,plan),plan);
-    if (spec.rotation) VMV.writeKeys(rotation,VMV.entries(spec.rotation,plan),plan);
-    if (spec.opacity) VMV.writeKeys(opacity,VMV.entries(spec.opacity,plan),plan);
+    if (spec.sx || spec.sy) VMV.writeOrStatic(width,VMV.entries(spec.sx || spec.scale,plan),plan,4);
+    if (spec.rotation) VMV.writeSmooth(rotation,VMV.entries(spec.rotation,plan),plan,7);
+    if (spec.opacity) VMV.writeSmooth(opacity,VMV.entries(spec.opacity,plan),plan,8);
     if (spec.x || spec.y) {
         var moments = [], axis, i, j;
         for (axis = 0; axis < 2; axis++) {
@@ -536,7 +572,7 @@ VMV.configureTransform = function (component, spec, plan) {
     }
     if (spec.protection) VMV.verifyCoverage(component,spec,plan,unitsX,unitsY,p);
 };
-VMV.writeOrStatic=function(param,entries,plan){var equal=true;for(var i=1;i<entries.length;i++)if(!VMV.closeValue(entries[i][1],entries[0][1]))equal=false;if(equal){VMV.setStatic(param,entries[0][1]);if(!VMV.closeValue(param.getValue(),entries[0][1]))throw Error('Static scale not confirmed');}else VMV.writeKeys(param,entries,plan);};
+VMV.writeOrStatic=function(param,entries,plan,index){var equal=true;for(var i=1;i<entries.length;i++)if(!VMV.closeValue(entries[i][1],entries[0][1]))equal=false;if(equal){VMV.setStatic(param,entries[0][1]);if(!VMV.closeValue(param.getValue(),entries[0][1]))throw Error('Static scale not confirmed');}else VMV.writeSmooth(param,entries,plan,index);};
 VMV.verifyCoverage=function(comp,spec,plan,ux,uy,position){
     var pos=comp.properties[1],scale=comp.properties[3],frames=Math.ceil(spec.duration/plan.frame),g=spec.protection;
     if(typeof pos.getValueAtTime!=='function'||typeof scale.getValueAtTime!=='function')throw Error('MZ_EDGE_READ_UNAVAILABLE');
@@ -722,7 +758,9 @@ var MZEngine=(function(){
   if(kind==='easeOut')return 1-Math.pow(1-u,3);
   if(kind==='elastic')return 1-Math.pow(1-u,3)*Math.cos(u*Math.PI*(2+spring*3));
   if(kind==='bounce'){var c=7.5625,d=2.75;if(u<1/d)return c*u*u;if(u<2/d){u-=1.5/d;return c*u*u+.75;}if(u<2.5/d){u-=2.25/d;return c*u*u+.9375;}u-=2.625/d;return c*u*u+.984375;}
-  return u*u*u*(u*(u*6-15)+10);
+  // Smooth = smoothstep: the exact curve Premiere 26.5.2 draws between two keys
+  // when the first key uses interpolation code 3 (measured by the API check).
+  return u*u*(3-2*u);
  }
  function options(o){o=o||{};var angle=num(o.angle,0,-180,180),dir=directions.hasOwnProperty(o.direction)?o.direction:direction(angle);return {duration:num(o.duration,.55,.08,20),amount:num(o.amount,1,.05,4),direction:dir,protect:o.protect!==false,angle:angle,phase:/^(in|out|accent|hold)$/.test(o.phase)?o.phase:'in',easing:/^(linear|smooth|easeIn|easeOut|elastic|bounce)$/.test(o.easing)?o.easing:'smooth',spring:num(o.spring,.5,0,1),shutter:num(o.shutter,180,0,360),zoom:num(o.zoom,12,1,100),pan:num(o.pan,3,0,30),reverse:!!o.reverse,frequency:num(o.frequency,5,1,20),opacity:num(o.opacity,50,0,100),softness:num(o.softness,24,0,200),distance:num(o.distance,10,0,300),seed:num(o.seed,17,0,100000)};}
  function sample(kind,o,u){
@@ -755,11 +793,13 @@ var MZEngine=(function(){
   var o=options(raw),duration=seconds||o.duration,n=Math.max(1,Math.floor(duration*fps+.000001)),axes=['scale','x','y','rotation','opacity','sx','sy'],spec={title:kind,name:'MZ / '+kind,group:kind==='photo'||o.phase==='hold'?'PHOTO':o.phase==='out'?'OUT':'IN',duration:n/fps,shutter:o.shutter};
   if(kind==='shadow'){spec.group='SHD';spec.duration=0;spec.shadow=[[o.opacity/100,o.angle,o.distance,o.softness]];return spec;}
   if(n>18000)throw Error('Animation exceeds 18000 frames');
-  // Real PPRO 26.5.2 ignores temporal easing for Transform Position. Keep two
-  // endpoints for Linear; other curves use the shared preview model and bounded
-  // simplification below. Do not claim that a successful enum setter means easing.
+  // Linear uses two endpoints. Other curves are sampled and simplified below;
+  // spec.ease lets the host replace a pure eased scalar segment (scale, opacity,
+  // rotation) by two native keys after measuring that Premiere draws the same
+  // curve. PPRO 26.5.2 gives no reliable two-key ease for Transform Position.
   var nativePair=/^(move|photo|fade|transition-slide|transition-zoom|transition-dip)$/.test(kind)&&o.phase!=='accent'&&o.easing==='linear';
   if(nativePair){spec.interpolation=0;for(var b=0;b<axes.length;b++){var ax=axes[b],start=sample(kind,o,0)[ax],end=sample(kind,o,1)[ax];if(Math.abs(start-end)>.00000001)spec[ax]=[[0,start],[n/fps,end]];}return spec;}
+  if(/^(move|photo|fade|transition-slide|transition-zoom|transition-dip)$/.test(kind)&&o.phase!=='accent'&&o.easing==='smooth')spec.ease='smooth';
   for(var a=0;a<axes.length;a++){
    var axis=axes[a],points=[],base=/^(scale|sx|sy|opacity)$/.test(axis)?100:0,changed=false;
    for(var f=0;f<=n;f++){var v=sample(kind,o,f/n)[axis];points.push([f/fps,v]);if(Math.abs(v-base)>.00000001)changed=true;}
@@ -811,7 +851,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=AltoTimeline;
 
 
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'4.0.0-beta.10',memory:{}};
+var MZ={version:'4.0.0-beta.11',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};
@@ -826,11 +866,13 @@ MZ.snapshot=function(comp,interpolation){
   if(comp.matchName==='AE.ADBE Drop Shadow'&&i===0&&p.getColorValue)r.color=p.getColorValue();
   if(p.areKeyframesSupported()){
    r.varying=p.isTimeVarying();var keys=p.getKeys();
-   if(keys)for(var j=0;j<keys.length;j++)r.keys.push([String(keys[j].ticks),p.getValueAtKey(keys[j]),interpolation||0]);
+   if(keys)for(var j=0;j<keys.length;j++)r.keys.push([String(keys[j].ticks),p.getValueAtKey(keys[j]),MZ.keyCode(interpolation,i,j)]);
   }
   out.push(r);
  }return out;
 };
+// Interpolation receipt: a number for every key, or {base, keys:{propertyIndex:[codes]}} for native pairs.
+MZ.keyCode=function(interpolation,i,j){if(interpolation&&typeof interpolation==='object'){var k=interpolation.keys&&interpolation.keys[i];return k&&typeof k[j]==='number'?k[j]:(interpolation.base||0);}return interpolation||0;};
 MZ.restore=function(comp,snapshot){for(var i=0;i<snapshot.length;i++){var p=comp.properties[i],s=snapshot[i];try{if(p.areKeyframesSupported()){var keys=p.getKeys();if(keys)for(var j=keys.length-1;j>=0;j--)VMV.checkResult(p.removeKey(keys[j]),'Restore key');VMV.checkResult(p.setTimeVarying(false),'Restore animation');}if(s.color&&p.setColorValue)VMV.checkResult(p.setColorValue(s.color[0],s.color[1],s.color[2],s.color[3],true),'Restore color');else VMV.setStatic(p,s.value);if(s.varying&&s.keys.length){VMV.checkResult(p.setTimeVarying(true),'Restore animation');var automatic=p.getKeys();if(automatic)for(var a=automatic.length-1;a>=0;a--)VMV.checkResult(p.removeKey(automatic[a]),'Restore automatic key');for(var k=0;k<s.keys.length;k++){var t=new Time();t.ticks=s.keys[k][0];VMV.checkResult(p.addKey(t),'Restore key');VMV.checkResult(p.setValueAtKey(t,s.keys[k][1],true),'Restore value');VMV.checkResult(p.setInterpolationTypeAtKey(t,s.keys[k][2],true),'Restore interpolation');var confirmed=p.getKeys(),found=false;if(confirmed)for(var ci=0;ci<confirmed.length;ci++)if(String(confirmed[ci].ticks)===String(t.ticks))found=true;if(!found||!VMV.closeValue(p.getValueAtKey(t),s.keys[k][1]))throw Error('Restore key not confirmed');}}}catch(e){throw Error('Cannot restore parameter '+i+': '+e.message);}}};
 MZ.curves=function(comp){
  var out=[];for(var i=0;i<comp.properties.numItems;i++){
@@ -885,7 +927,7 @@ MZ.apply=function(request){
    var spec=MZEngine.build(request.kind,perOptions,fps,full?last:Math.min(perOptions.duration,last));
    var protect=options.protect&&/^(move|photo|transition-slide|transition-zoom)$/.test(request.kind);
    if(protect){spec=MZEngine.protect(spec,MZ.edgeGeometry(seq,t,owner?owner.index:-1),fps);spec.shutter=0;}
-   var plan=VMV.makePlan(seq,t,spec);plan.full=false;plan.offset=perOptions.phase==='out'?Math.max(0,plan.last-spec.duration):0;plan.interpolation=spec.interpolation||0;
+   var plan=VMV.makePlan(seq,t,spec);plan.full=false;plan.offset=perOptions.phase==='out'?Math.max(0,plan.last-spec.duration):0;plan.interpolation=spec.interpolation||0;plan.ease=spec.ease||null;
    specs.push(spec);plans.push(plan);qt.push(VMV.qeClip(qseq,t,plan.frame));if(cross){var removable=qt[i].getComponentAt(cross.qeIndex);if(!removable||!removable.remove)throw Error('Effect replacement API unavailable');}
   }
   var next={};for(var key in data)if(data.hasOwnProperty(key))next[key]=data[key];
@@ -894,12 +936,13 @@ MZ.apply=function(request){
    if(old&&!cross){comp=targets[i].clip.components[old.index];restores.push({comp:comp,snapshot:MZ.snapshot(comp,old.interpolation||0)});MZ.resetOwned(comp,old);defaults[i]=old.defaults;}
    else{comp=VMV.addEffect(seq,targets[i],qt[i],effect,match,records);defaults[i]=MZ.snapshot(comp);}
    if(match==='AE.ADBE Geometry2')VMV.configureTransform(comp,specs[i],plans[i]);else VMV.configureShadow(comp,specs[i].shadow[0]);
-   next[MZ.key(seq,targets[i])]={index:old?old.index:targets[i].clip.components.numItems-1,match:match,qeIndex:old?old.qeIndex:Number(qt[i].numComponents)-1,fingerprint:VMV.fingerprint(comp),defaults:defaults[i],kind:request.kind,options:options,interpolation:plans[i].interpolation,curves:MZ.curves(comp)};
+   next[MZ.key(seq,targets[i])]={index:old?old.index:targets[i].clip.components.numItems-1,match:match,qeIndex:old?old.qeIndex:Number(qt[i].numComponents)-1,fingerprint:VMV.fingerprint(comp),defaults:defaults[i],kind:request.kind,options:options,interpolation:MZ.receipt(plans[i]),curves:MZ.curves(comp)};
   }
-  MZ.persist(next);if(cross){var removalError=null;try{qt[0].getComponentAt(cross.qeIndex).remove();}catch(re){removalError=re;}if(targets[0].clip.components.numItems!==cross.index+1){MZ.persist(data);throw removalError||Error('Old effect could not be removed');}if(!MZ.sameFingerprint(VMV.fingerprint(targets[0].clip.components[cross.index]),next[MZ.key(seq,targets[0])].fingerprint))throw Error('Effect replacement verification failed');}var keys=0;for(i=0;i<plans.length;i++)keys+=plans[i].verifiedKeys||0;
-  return VMV.encode({ok:true,count:targets.length,keys:keys,replaced:check.conflicts,saved:!!app.project.path});
+  MZ.persist(next);if(cross){var removalError=null;try{qt[0].getComponentAt(cross.qeIndex).remove();}catch(re){removalError=re;}if(targets[0].clip.components.numItems!==cross.index+1){MZ.persist(data);throw removalError||Error('Old effect could not be removed');}if(!MZ.sameFingerprint(VMV.fingerprint(targets[0].clip.components[cross.index]),next[MZ.key(seq,targets[0])].fingerprint))throw Error('Effect replacement verification failed');}var keys=0,pairs=0,checks=[];for(i=0;i<plans.length;i++){keys+=plans[i].verifiedKeys||0;for(var pk in plans[i].keyInterp||{})if(plans[i].keyInterp.hasOwnProperty(pk))pairs++;if(plans[i].pairChecks)checks=checks.concat(plans[i].pairChecks);}
+  return VMV.encode({ok:true,count:targets.length,keys:keys,nativePairs:pairs,pairChecks:checks,replaced:check.conflicts,saved:!!app.project.path});
  }catch(e){var restoreErrors=0,restoreErrorDetails=[];for(var r=restores.length-1;r>=0;r--)try{MZ.restore(restores[r].comp,restores[r].snapshot);}catch(ignored){restoreErrors++;restoreErrorDetails.push(String(ignored.message||ignored));}var left=seq?VMV.rollback(seq,records):0;return VMV.encode({ok:false,error:String(e.message||e),remainingEffects:left,restoreErrors:restoreErrors,restoreErrorDetails:restoreErrorDetails});}
 };
+MZ.receipt=function(plan){var keys=plan.keyInterp,any=false;for(var k in keys)if(keys.hasOwnProperty(k))any=true;return any?{base:plan.interpolation||0,keys:keys}:(plan.interpolation||0);};
 MZ.findBin=function(name,parent){parent=parent||app.project.rootItem;for(var i=0;i<parent.children.numItems;i++){var c=parent.children[i];if(c.type===2&&c.name===name)return c;}return parent.createBin(name);};
 MZ.importFiles=function(paths,binName){try{if(!(paths instanceof Array)||paths.length>200)throw Error('Select up to 200 files');var clean=[];for(var i=0;i<paths.length;i++){var f=new File(paths[i]);if(!f.exists)throw Error('File missing: '+f.name);if(!/\.(mp4|mov|mxf|avi|mkv|wav|mp3|aif|aiff|aac|m4a|png|jpg|jpeg|webp|psd|tif|tiff)$/i.test(f.name))throw Error('Unsupported media: '+f.name);clean.push(f.fsName);}var bin=MZ.findBin(binName||'Montazhopa');var ok=app.project.importFiles(clean,true,bin,false);if(!ok)throw Error('Premiere rejected import');return VMV.encode({ok:true,count:clean.length});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.insertMedia=function(path,trackIndex,isAudio){try{var seq=app.project.activeSequence;if(!seq)throw Error('Open a sequence');var f=new File(path);if(!f.exists)throw Error('Media is missing');trackIndex=Number(trackIndex);var tracks=isAudio?seq.audioTracks:seq.videoTracks;if(trackIndex<0||trackIndex>=tracks.numTracks||Math.floor(trackIndex)!==trackIndex)throw Error('Track does not exist');var track=tracks[trackIndex];if(track.isLocked())throw Error('Track is locked');var bin=MZ.findBin('Montazhopa / Media'),before=bin.children.numItems;if(!app.project.importFiles([f.fsName],true,bin,false))throw Error('Import failed');var item=null;for(var i=0;i<bin.children.numItems;i++){var c=bin.children[i];try{if(c.getMediaPath()===f.fsName)item=c;}catch(ignored){}}if(!item)throw Error('Imported item not found');var at=seq.getPlayerPosition(),start=VMV.seconds(at),end=VMV.seconds(item.getOutPoint(isAudio?2:1))-VMV.seconds(item.getInPoint(isAudio?2:1));if(!isFinite(end)||end<=0)throw Error('Cannot read media duration');for(i=0;i<track.clips.numItems;i++){c=track.clips[i];if(VMV.seconds(c.start)<start+end&&VMV.seconds(c.end)>start)throw Error('MZ_TRACK_OCCUPIED');}track.overwriteClip(item,String(start));return VMV.encode({ok:true});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
@@ -1291,7 +1334,7 @@ MZ.zoomPreview=function(){try{
  MZ.probeClear(scale);
  VMV.checkResult(scale.addKey(k0),'Key 1');VMV.checkResult(scale.addKey(k1),'Key 2');
  VMV.checkResult(scale.setValueAtKey(k0,base,true),'Value 1');VMV.checkResult(scale.setValueAtKey(k1,base*1.18,true),'Value 2');
- VMV.checkResult(scale.setInterpolationTypeAtKey(k0,5,true),'Ease 1');VMV.checkResult(scale.setInterpolationTypeAtKey(k1,5,true),'Ease 2');
+ VMV.checkResult(scale.setInterpolationTypeAtKey(k0,3,true),'Ease 1');VMV.checkResult(scale.setInterpolationTypeAtKey(k1,3,true),'Ease 2');
  return VMV.encode({ok:true,kind:'alto-zoom-preview',clip:t.name,atSeconds:Math.round((t.start+offset)*1000)/1000,from:base,to:Math.round(base*118)/100,keys:(scale.getKeys()||[]).length,at25:MZ.probeValue(scale.getValueAtTime(VMV.time(sourceIn+(offset+0.1)*rate))),samples:MZ.probeSamples(scale,sourceIn+offset*rate,sourceIn+(offset+0.4)*rate,base,base*1.18)});
 }catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0});}};
 /* Probe v4: fresh keys per interpolation pair (k0 code - k1 code), sampled at

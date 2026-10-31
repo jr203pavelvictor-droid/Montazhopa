@@ -412,7 +412,7 @@ VMV.writeKeys = function (param, entries, plan) {
         var time = VMV.time(seconds);
         VMV.checkResult(param.addKey(time), 'Добавление ключа');
         VMV.checkResult(param.setValueAtKey(time, entries[i][1], true), 'Запись ключа ' + (i+1));
-        VMV.checkResult(param.setInterpolationTypeAtKey(time, plan.interpolation || 0, true), 'Интерполяция ключа');
+        if (!plan.pair) VMV.checkResult(param.setInterpolationTypeAtKey(time, plan.interpolation || 0, true), 'Интерполяция ключа');
         var written = param.getKeys(), found = false;
         if (written) for (var w=0;w<written.length;w++) if (String(written[w].ticks)===String(time.ticks)) found=true;
         if (!found || !VMV.closeValue(param.getValueAtKey(time),entries[i][1])) throw new Error('Premiere не подтвердил ключ '+(i+1)+': '+param.displayName);
@@ -423,6 +423,8 @@ VMV.writeKeys = function (param, entries, plan) {
         !VMV.closeValue(param.getValueAtKey(lastTime), entries[entries.length - 1][1])) {
         throw new Error('Premiere не подтвердил записанные значения ключей.');
     }
+    // Native pairs: values first, then per-key codes, as measured by the API check.
+    if (plan.pair) for (i = 0; i < entries.length; i++) VMV.checkResult(param.setInterpolationTypeAtKey(VMV.time(plan.sourceIn + entries[i][0] * plan.sourceRate), plan.pair[i], true), 'Интерполяция ключа');
     var confirmed=param.getKeys(), lookup={};
     if (!param.isTimeVarying() || !confirmed || confirmed.length!==entries.length) {
         throw new Error('Premiere не сохранил все ключи: ожидалось '+entries.length+', найдено '+(confirmed?confirmed.length:0)+'. Параметр: '+param.displayName);
@@ -461,6 +463,40 @@ VMV.verifyBezier = function(param,entries,plan) {
     }
     if(!changed)throw Error('MZ_BEZIER_NOT_SMOOTH');
 };
+// Smooth scalar animation as two native keys. PPRO 26.5.2: interpolation code 3
+// on the first key draws smoothstep, at the clip start and mid-clip (API check,
+// probe v4). The curve is measured after writing; any mismatch falls back to the
+// exact sampled keys, so a different Premiere build can never get a wrong shape.
+VMV.SMOOTH_PAIR=[3,3];
+VMV.pairShape=function(entries,kind){
+    var a=entries[0],b=entries[entries.length-1],span=b[0]-a[0];
+    if(!kind||entries.length<2||!(span>0)||a[1] instanceof Array||typeof a[1]!=='number'||typeof b[1]!=='number')return false;
+    var delta=b[1]-a[1],limit=Math.max(.000001,Math.abs(delta)*.002);if(Math.abs(delta)<.00000001)return false;
+    for(var i=0;i<entries.length;i++)if(Math.abs(entries[i][1]-(a[1]+delta*MZEngine.ease((entries[i][0]-a[0])/span,kind,.5)))>limit)return false;
+    return true;
+};
+VMV.pairError=function(param,first,last,kind,plan){
+    var fractions=[.125,.25,.5,.75,.875],delta=last[1]-first[1],worst=0,previous=0;
+    for(var i=0;i<fractions.length;i++){
+        var at=plan.sourceIn+(first[0]+(last[0]-first[0])*fractions[i])*plan.sourceRate,p=(Number(param.getValueAtTime(VMV.time(at)))-first[1])/delta;
+        if(!isFinite(p)||p<previous-.0001||p<-.0001||p>1.0001)return 1;
+        previous=p;worst=Math.max(worst,Math.abs(p-MZEngine.ease(fractions[i],kind,.5)));
+    }
+    return worst;
+};
+VMV.writeEasedPair=function(param,entries,plan,index){
+    if(!plan.ease||typeof param.getValueAtTime!=='function'||!VMV.pairShape(entries,plan.ease))return false;
+    var first=entries[0],last=entries[entries.length-1],codes=VMV.SMOOTH_PAIR;
+    try{
+        VMV.writeKeys(param,[first,last],{sourceIn:plan.sourceIn,sourceRate:plan.sourceRate,pair:codes});
+        var error=VMV.pairError(param,first,last,plan.ease,plan);
+        plan.pairChecks=plan.pairChecks||[];plan.pairChecks.push({index:index,error:Math.round(error*10000)/10000});
+        if(error>.03)return false;
+    }catch(e){plan.pairChecks=plan.pairChecks||[];plan.pairChecks.push({index:index,error:String(e.message||e)});return false;}
+    plan.verifiedKeys=(plan.verifiedKeys||0)+2;plan.keyInterp=plan.keyInterp||{};plan.keyInterp[index]=[codes[0],codes[1]];
+    return true;
+};
+VMV.writeSmooth=function(param,entries,plan,index){if(!VMV.writeEasedPair(param,entries,plan,index))VMV.writeKeys(param,entries,plan);};
 VMV.makePlan = function (seq, target, spec) {
     var clip = VMV.publicClip(seq, target);
     var duration = target.end - target.start;
@@ -508,11 +544,11 @@ VMV.configureTransform = function (component, spec, plan) {
     VMV.setStatic(compShutter,false); VMV.setStatic(shutter,typeof spec.shutter==='number'?spec.shutter:180);
     if(!VMV.closeValue(shutter.getValue(),typeof spec.shutter==='number'?spec.shutter:180)) throw new Error('Premiere не подтвердил Shutter Angle.');
     VMV.setStatic(uniform,!(spec.sx || spec.sy));
-    if (spec.sy || spec.scale) VMV.writeOrStatic(height,VMV.entries(spec.sy || spec.scale,plan),plan);
+    if (spec.sy || spec.scale) VMV.writeOrStatic(height,VMV.entries(spec.sy || spec.scale,plan),plan,3);
     // With uniform scaling enabled, the height/Scale parameter drives both axes.
-    if (spec.sx || spec.sy) VMV.writeOrStatic(width,VMV.entries(spec.sx || spec.scale,plan),plan);
-    if (spec.rotation) VMV.writeKeys(rotation,VMV.entries(spec.rotation,plan),plan);
-    if (spec.opacity) VMV.writeKeys(opacity,VMV.entries(spec.opacity,plan),plan);
+    if (spec.sx || spec.sy) VMV.writeOrStatic(width,VMV.entries(spec.sx || spec.scale,plan),plan,4);
+    if (spec.rotation) VMV.writeSmooth(rotation,VMV.entries(spec.rotation,plan),plan,7);
+    if (spec.opacity) VMV.writeSmooth(opacity,VMV.entries(spec.opacity,plan),plan,8);
     if (spec.x || spec.y) {
         var moments = [], axis, i, j;
         for (axis = 0; axis < 2; axis++) {
@@ -533,7 +569,7 @@ VMV.configureTransform = function (component, spec, plan) {
     }
     if (spec.protection) VMV.verifyCoverage(component,spec,plan,unitsX,unitsY,p);
 };
-VMV.writeOrStatic=function(param,entries,plan){var equal=true;for(var i=1;i<entries.length;i++)if(!VMV.closeValue(entries[i][1],entries[0][1]))equal=false;if(equal){VMV.setStatic(param,entries[0][1]);if(!VMV.closeValue(param.getValue(),entries[0][1]))throw Error('Static scale not confirmed');}else VMV.writeKeys(param,entries,plan);};
+VMV.writeOrStatic=function(param,entries,plan,index){var equal=true;for(var i=1;i<entries.length;i++)if(!VMV.closeValue(entries[i][1],entries[0][1]))equal=false;if(equal){VMV.setStatic(param,entries[0][1]);if(!VMV.closeValue(param.getValue(),entries[0][1]))throw Error('Static scale not confirmed');}else VMV.writeSmooth(param,entries,plan,index);};
 VMV.verifyCoverage=function(comp,spec,plan,ux,uy,position){
     var pos=comp.properties[1],scale=comp.properties[3],frames=Math.ceil(spec.duration/plan.frame),g=spec.protection;
     if(typeof pos.getValueAtTime!=='function'||typeof scale.getValueAtTime!=='function')throw Error('MZ_EDGE_READ_UNAVAILABLE');

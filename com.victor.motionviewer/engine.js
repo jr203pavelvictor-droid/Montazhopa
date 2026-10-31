@@ -12,7 +12,9 @@ var MZEngine=(function(){
   if(kind==='easeOut')return 1-Math.pow(1-u,3);
   if(kind==='elastic')return 1-Math.pow(1-u,3)*Math.cos(u*Math.PI*(2+spring*3));
   if(kind==='bounce'){var c=7.5625,d=2.75;if(u<1/d)return c*u*u;if(u<2/d){u-=1.5/d;return c*u*u+.75;}if(u<2.5/d){u-=2.25/d;return c*u*u+.9375;}u-=2.625/d;return c*u*u+.984375;}
-  return u*u*u*(u*(u*6-15)+10);
+  // Smooth = smoothstep: the exact curve Premiere 26.5.2 draws between two keys
+  // when the first key uses interpolation code 3 (measured by the API check).
+  return u*u*(3-2*u);
  }
  function options(o){o=o||{};var angle=num(o.angle,0,-180,180),dir=directions.hasOwnProperty(o.direction)?o.direction:direction(angle);return {duration:num(o.duration,.55,.08,20),amount:num(o.amount,1,.05,4),direction:dir,protect:o.protect!==false,angle:angle,phase:/^(in|out|accent|hold)$/.test(o.phase)?o.phase:'in',easing:/^(linear|smooth|easeIn|easeOut|elastic|bounce)$/.test(o.easing)?o.easing:'smooth',spring:num(o.spring,.5,0,1),shutter:num(o.shutter,180,0,360),zoom:num(o.zoom,12,1,100),pan:num(o.pan,3,0,30),reverse:!!o.reverse,frequency:num(o.frequency,5,1,20),opacity:num(o.opacity,50,0,100),softness:num(o.softness,24,0,200),distance:num(o.distance,10,0,300),seed:num(o.seed,17,0,100000)};}
  function sample(kind,o,u){
@@ -45,11 +47,13 @@ var MZEngine=(function(){
   var o=options(raw),duration=seconds||o.duration,n=Math.max(1,Math.floor(duration*fps+.000001)),axes=['scale','x','y','rotation','opacity','sx','sy'],spec={title:kind,name:'MZ / '+kind,group:kind==='photo'||o.phase==='hold'?'PHOTO':o.phase==='out'?'OUT':'IN',duration:n/fps,shutter:o.shutter};
   if(kind==='shadow'){spec.group='SHD';spec.duration=0;spec.shadow=[[o.opacity/100,o.angle,o.distance,o.softness]];return spec;}
   if(n>18000)throw Error('Animation exceeds 18000 frames');
-  // Real PPRO 26.5.2 ignores temporal easing for Transform Position. Keep two
-  // endpoints for Linear; other curves use the shared preview model and bounded
-  // simplification below. Do not claim that a successful enum setter means easing.
+  // Linear uses two endpoints. Other curves are sampled and simplified below;
+  // spec.ease lets the host replace a pure eased scalar segment (scale, opacity,
+  // rotation) by two native keys after measuring that Premiere draws the same
+  // curve. PPRO 26.5.2 gives no reliable two-key ease for Transform Position.
   var nativePair=/^(move|photo|fade|transition-slide|transition-zoom|transition-dip)$/.test(kind)&&o.phase!=='accent'&&o.easing==='linear';
   if(nativePair){spec.interpolation=0;for(var b=0;b<axes.length;b++){var ax=axes[b],start=sample(kind,o,0)[ax],end=sample(kind,o,1)[ax];if(Math.abs(start-end)>.00000001)spec[ax]=[[0,start],[n/fps,end]];}return spec;}
+  if(/^(move|photo|fade|transition-slide|transition-zoom|transition-dip)$/.test(kind)&&o.phase!=='accent'&&o.easing==='smooth')spec.ease='smooth';
   for(var a=0;a<axes.length;a++){
    var axis=axes[a],points=[],base=/^(scale|sx|sy|opacity)$/.test(axis)?100:0,changed=false;
    for(var f=0;f<=n;f++){var v=sample(kind,o,f/n)[axis];points.push([f/fps,v]);if(Math.abs(v-base)>.00000001)changed=true;}

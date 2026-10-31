@@ -130,7 +130,7 @@ MZ.zoomPreview=function(){try{
  MZ.probeClear(scale);
  VMV.checkResult(scale.addKey(k0),'Key 1');VMV.checkResult(scale.addKey(k1),'Key 2');
  VMV.checkResult(scale.setValueAtKey(k0,base,true),'Value 1');VMV.checkResult(scale.setValueAtKey(k1,base*1.18,true),'Value 2');
- VMV.checkResult(scale.setInterpolationTypeAtKey(k0,5,true),'Ease 1');VMV.checkResult(scale.setInterpolationTypeAtKey(k1,5,true),'Ease 2');
+ VMV.checkResult(scale.setInterpolationTypeAtKey(k0,3,true),'Ease 1');VMV.checkResult(scale.setInterpolationTypeAtKey(k1,3,true),'Ease 2');
  return VMV.encode({ok:true,kind:'alto-zoom-preview',clip:t.name,atSeconds:Math.round((t.start+offset)*1000)/1000,from:base,to:Math.round(base*118)/100,keys:(scale.getKeys()||[]).length,at25:MZ.probeValue(scale.getValueAtTime(VMV.time(sourceIn+(offset+0.1)*rate))),samples:MZ.probeSamples(scale,sourceIn+offset*rate,sourceIn+(offset+0.4)*rate,base,base*1.18)});
 }catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0});}};
 /* Probe v4: fresh keys per interpolation pair (k0 code - k1 code), sampled at

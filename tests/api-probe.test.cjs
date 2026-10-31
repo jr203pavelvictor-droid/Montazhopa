@@ -53,7 +53,7 @@ test('Key test v2 compares key orders and runs the real ALTO key writer',()=>{
 test('Visible punch-in writes two eased Motion Scale keys from the playhead and keeps them',()=>{
  const f=fixture(),r=JSON.parse(f.ctx.MZ.zoomPreview());
  assert(r.ok,r.error);assert.equal(r.keys,2);const scale=motion(f).properties[1];
- assert.deepEqual([...scale.interp.values()],[5,5]);assert.deepEqual([...scale.keys.values()].sort((a,b)=>a-b),[100,118]);
+ assert.deepEqual([...scale.interp.values()],[3,3]);assert.deepEqual([...scale.keys.values()].sort((a,b)=>a-b),[100,118]);
  assert.equal(f.mutations(),0);
 });
 test('Visible punch-in refuses an animated Motion Scale',()=>{
