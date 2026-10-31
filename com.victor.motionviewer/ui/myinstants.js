@@ -66,9 +66,18 @@
       var filename=client.save(bytes,state.folder,item.title);
       state.lastFiles.unshift(filename);
       state.lastFiles=state.lastFiles.slice(0,5);
-      state.message='Сохранено: '+filename;
-    }catch(e){state.error='Ошибка загрузки: '+e.message;state.message='';}
+      state.message='Сохранено: '+filename;state.saved=state.saved||{};state.saved[item.mp3]=filename;
+      // Also keep it in My media so it is one click away next time.
+      try{if(window.MZLocal&&window.MZLocal.importAsset)window.MZLocal.importAsset({path:filename,name:filename.split(/[\\/]/).pop()},item.title);}catch(ignored){}
+      return filename;
+    }catch(e){state.error='Ошибка загрузки: '+e.message;state.message='';return '';}
     finally{state.downloading='';U.render();}
+  }
+  // Download (once) and drop the sound at the playhead on the audio track from Settings.
+  async function toTimeline(U,item) {
+    var file=state.saved&&state.saved[item.mp3]||await download(U,item);if(!file)return;
+    await U.operation(async function(){var track=(U.preferences&&U.preferences.audioTrack||1)-1,r=await U.host('MZ.insertMedia',[file,track,true]);
+      state.message=U.t('На таймлайне: ','On the timeline: ')+item.title+(r&&r.track?' · A'+r.track:'');state.error='';U.render();});
   }
   function render(U, back) {
     var m=U.$('main');
@@ -79,7 +88,7 @@
     var h=U.el('div','section-heading'),head=U.el('div');
     head.append(U.el('p','eyebrow','ALTO / MEME SOUNDS'),U.el('h2','','Myinstants'));
     h.append(head);m.append(U.button('← '+U.t('Звуки','Sounds'),function(){stop();back();},'back'),h);
-    var intro=U.el('p','help-text',U.t('Ищи мемные звуки, слушай и скачивай MP3 в выбранную папку проекта. Поиск выполняется только по кнопке.','Search meme sounds, listen, and download MP3s to a folder you choose. Search runs only when requested.'));
+    var intro=U.el('p','help-text',U.t('Ищи мемные звуки, слушай, скачивай MP3 в папку проекта или сразу ставь на таймлайн у курсора. Скачанное попадает и в «Мои материалы».','Search meme sounds, listen, download MP3s to your project folder or drop them straight on the timeline. Downloads also land in My media.'));
     m.append(intro);
     var box=U.el('section','panel mi-panel'),form=U.el('div','mi-search'),input=U.el('input');
     input.type='search';input.placeholder='vine boom, bruh, metal pipe…';input.value=state.query;input.maxLength=100;
@@ -107,7 +116,8 @@
       var play=U.button(U.t('▶ Слушать','▶ Play'),function(){preview(U,item);});
       var save=U.button(state.downloading===item.mp3?U.t('Скачиваю…','Downloading…'):U.t('↓ Скачать MP3','↓ Download MP3'),function(){download(U,item);},'apply');
       save.disabled=!!(state.loading||state.downloading);
-      controls.append(play,save);row.append(info,controls);results.append(row);
+      var place=U.button(U.t('＋ На таймлайн','＋ To timeline'),function(){toTimeline(U,item);},'mi-place');place.disabled=!!(state.loading||state.downloading);
+      controls.append(play,save,place);row.append(info,controls);results.append(row);
     });
     m.append(results);
     if(state.lastFiles.length){

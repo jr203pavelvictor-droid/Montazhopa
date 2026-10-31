@@ -25,4 +25,9 @@ try {
  assert.deepEqual(fs.readFileSync(two),data);
  assert.throws(()=>client.save(data,path.join(temp,'missing'),'Bruh'));
 } finally {fs.rmSync(temp,{recursive:true,force:true});}
+// Markup variants the site has used: data-url instead of onclick play(), a plain MP3 link, a localized page path.
+{const alt='<div class="instant"><a class="instant-link" href="/ru/instant/vine-boom-1/">Vine Boom</a><button class="small-button" data-url="/media/sounds/vine-boom.mp3"></button></div>'+
+ '<div class="instant"><a class="instant-link link-secondary" href="/en/instant/metal-pipe-2/">Metal pipe</a><a href="/media/sounds/metal-pipe.mp3" download>MP3</a></div>'+
+ '<div class="instant"><a class="instant-link" href="https://evil.example/instant/x/">Bad</a><button data-url="/media/sounds/x.mp3"></button></div>';
+ const r=client.parseResults(alt);assert.deepEqual(r.map(x=>x.title),['Vine Boom','Metal pipe']);assert.equal(r[0].mp3,'https://www.myinstants.com/media/sounds/vine-boom.mp3');assert.equal(r[1].page,'https://www.myinstants.com/en/instant/metal-pipe-2/');}
 console.log('PASS: Myinstants parser, URLs, filenames, duplicate-safe saving');

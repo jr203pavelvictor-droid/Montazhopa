@@ -45,3 +45,6 @@ html[data-theme=light] .preset-preview{background-color:#eef3f5f2!important}
 /* Premiere transitions panel */
 .native-transitions{margin-bottom:12px}.native-transitions input[type=search]{width:100%;box-sizing:border-box;margin:8px 0 4px}
 .transition-results{display:flex;flex-wrap:wrap;gap:4px 10px}
+/* Meme sounds: Play / Download / To timeline wrap on narrow panels. */
+#main .mi-actions{flex-wrap:wrap!important}
+#main .mi-actions>button{flex:1 1 90px!important;min-width:0!important}

@@ -48,8 +48,9 @@
       if (!link) continue;
       var href = attr(link[0], 'href');
       var title = decode(link[0].replace(/^<a\b[^>]*>/i, '').replace(/<\/a>[\s\S]*$/i, '').replace(/<[^>]*>/g, '').trim()).replace(/\s+/g, ' ').slice(0, 160);
-      var play = /\bplay\(\s*['"]([^'"]+\.mp3)['"]/i.exec(decode(segment));
-      if (!title || !play || !/^\/(?:en\/)?instant\/[^?#]+\/?$/.test(href)) continue;
+      // The site has moved the MP3 between onclick play(), data attributes and plain links; accept any of them.
+      var text = decode(segment), play = /\bplay\(\s*['"]([^'"]+\.mp3)['"]/i.exec(text) || /\b(?:data-url|data-src|src|href)\s*=\s*["']([^"']*\/media\/sounds\/[^"']+\.mp3)["']/i.exec(text) || /(\/media\/sounds\/[^\s'"<>?#]+\.mp3)/i.exec(text);
+      if (!title || !play || !/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?instant\/[^?#]+\/?$/i.test(href)) continue;
       try {
         var mp3 = safeUrl(play[1], 'mp3');
         var page = safeUrl(href, 'page');

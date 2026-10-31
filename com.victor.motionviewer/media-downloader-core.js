@@ -8,7 +8,20 @@
   'use strict';
   var fs=deps.fs,path=deps.path,os=deps.os,cp=deps.cp,https=deps.https,crypto=deps.crypto;
   var platform=deps.platform||process.platform, root=deps.root||path.join(os.homedir(),'.alto-downloader');
-  var running=null, installing=false;
+  var running=null, installing=false, env=deps.env||process.env;
+  // FFmpeg merges the best video with its audio and converts to MP3. Use the one
+  // chosen in settings, else one beside the engine (Stacher keeps ffmpeg-*/bin next
+  // to its yt-dlp), else the first on PATH. Empty string: none on this computer.
+  function findFfmpeg(options){
+    options=options||{};if(options.ffmpeg)return String(options.ffmpeg);
+    var exe=platform==='win32'?'ffmpeg.exe':'ffmpeg',dirs=[],i;
+    function isFile(p){try{return fs.statSync(p).isFile();}catch(_){return false;}}
+    var engine=options.engine||(isFile(managedPath())?managedPath():'');
+    if(engine){var base=path.dirname(String(engine));dirs.push(base);try{var names=fs.readdirSync(base);for(i=0;i<names.length&&i<200;i++)if(/^ffmpeg/i.test(names[i]))dirs.push(path.join(base,names[i],'bin'),path.join(base,names[i]));}catch(_){}}
+    var parts=String(env.PATH||env.Path||'').split(path.delimiter);for(i=0;i<parts.length&&i<200;i++)if(parts[i])dirs.push(parts[i]);
+    for(i=0;i<dirs.length;i++){var candidate=path.join(dirs[i],exe);if(isFile(candidate))return candidate;}
+    return '';
+  }
   function ensureDir(dir){if(!fs.existsSync(dir)||!fs.statSync(dir).isDirectory())throw Error('Папка не существует: '+dir);return dir;}
   function url(v){var u;try{u=new URL(String(v||'').trim());}catch(_){throw Error('Некорректная ссылка');}if(u.protocol!=='https:'&&u.protocol!=='http:')throw Error('Ссылка должна начинаться с http:// или https://');return u.href;}
   function binaryName(){return platform==='win32'?'yt-dlp.exe':platform==='darwin'?'yt-dlp_macos':'yt-dlp';}
@@ -105,14 +118,25 @@
     options=options||{};ensureDir(folder);
     var args=['--ignore-config','--no-warnings','--newline','--no-overwrites', '--windows-filenames', '--no-mtime'];
     if(!options.playlist)args.push('--no-playlist');
-    var mode=options.mode||'best';
-    if(mode==='audio')args.push('-f','bestaudio/best','-x','--audio-format',options.audioFormat||'mp3');
-    else if(mode==='mp4')args.push('-f','bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/best','--merge-output-format','mp4');
-    else if(mode==='1080'||mode==='720')args.push('-f','bv*[height<='+mode+']+ba/b[height<='+mode+']/best[height<='+mode+']','--merge-output-format','mp4/mkv');
-    else if(mode.startsWith('format:')){
-      var id=mode.slice(7);if(!/^[a-zA-Z0-9_.+-]{1,80}$/.test(id))throw Error('Неверный ID формата');args.push('-f',id.indexOf('+ba')<0?id:(id+'/best'),'--merge-output-format','mp4/mkv');
-    }else args.push('-f','bv*+ba/b','--merge-output-format','mp4/mkv');
-    if(options.ffmpeg){if(!fs.existsSync(options.ffmpeg))throw Error('FFmpeg не найден: '+options.ffmpeg);args.push('--ffmpeg-location',options.ffmpeg);}
+    var mode=options.mode||'best',ffmpeg=findFfmpeg(options);
+    if(options.ffmpeg&&!fs.existsSync(options.ffmpeg))throw Error('FFmpeg не найден: '+options.ffmpeg);
+    if(ffmpeg){
+      if(mode==='audio')args.push('-f','bestaudio/best','-x','--audio-format',options.audioFormat||'mp3');
+      else if(mode==='mp4')args.push('-f','bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/best','--merge-output-format','mp4');
+      else if(mode==='1080'||mode==='720')args.push('-f','bv*[height<='+mode+']+ba/b[height<='+mode+']/best[height<='+mode+']','--merge-output-format','mp4/mkv');
+      else if(mode.startsWith('format:')){
+        var id=mode.slice(7);if(!/^[a-zA-Z0-9_.+-]{1,80}$/.test(id))throw Error('Неверный ID формата');args.push('-f',id.indexOf('+ba')<0?id:(id+'/best'),'--merge-output-format','mp4/mkv');
+      }else args.push('-f','bv*+ba/b','--merge-output-format','mp4/mkv');
+      args.push('--ffmpeg-location',ffmpeg);
+    }else{
+      // Without FFmpeg yt-dlp cannot join separate video and audio streams: it would
+      // leave a silent video next to a separate audio file. Ask for one ready file.
+      if(mode==='audio')args.push('-f','bestaudio[ext=m4a]/bestaudio/best');
+      else if(mode==='1080'||mode==='720')args.push('-f','b[height<='+mode+'][ext=mp4]/b[height<='+mode+']/b');
+      else if(mode.startsWith('format:')){
+        var single=mode.slice(7);if(!/^[a-zA-Z0-9_.+-]{1,80}$/.test(single))throw Error('Неверный ID формата');if(single.indexOf('+')>=0)throw Error('Этот формат состоит из отдельных видео и звука: для него нужен FFmpeg.');args.push('-f',single);
+      }else args.push('-f','b[ext=mp4]/b');
+    }
     // Use an ASCII-only per-run stem for yt-dlp. Russian/emoji titles are renamed
     // in Node after the file is confirmed. This avoids uncertain terminal encoding
     // and makes recovery deterministic even when yt-dlp prints a quoted Unicode path.
@@ -264,5 +288,5 @@
     throw Error('yt-dlp завершился, но файл не обнаружен в '+folder+'. '+details.join(' · ')+'. Проверь папку в Проводнике.');
   }
   function cancel(){if(running){try{running.kill();}catch(_){}return true;}return false;}
-  return {inspect:inspect,download:download,install:install,version:version,cancel:cancel,managedPath:managedPath,resolveEngine:resolveEngine,buildArgs:buildArgs};
+  return {inspect:inspect,download:download,install:install,version:version,cancel:cancel,managedPath:managedPath,resolveEngine:resolveEngine,buildArgs:buildArgs,findFfmpeg:findFfmpeg};
 });
