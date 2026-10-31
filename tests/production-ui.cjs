@@ -29,6 +29,18 @@ let pw;try{pw=require(process.env.MZ_PLAYWRIGHT_MODULE||'playwright');}catch{pw=
  await page.locator('.point-details summary').click();await page.getByRole('button',{name:'Дублировать точку',exact:true}).click();await page.locator('.point-details summary').click();assert.equal(await page.locator('.stop-row').count(),5);await page.getByRole('button',{name:'Удалить точку',exact:true}).click();assert.equal(await page.locator('.stop-row').count(),4);
  await page.locator('.stop-row').nth(1).locator('.stop-number').dragTo(page.locator('.stop-row').nth(2));assert.equal(await page.evaluate(()=>MZDebug.state.cameraIndex),2);
  const frame=await page.locator('#camera-map').boundingBox();await page.locator('#camera-map').click({position:{x:frame.width*.7,y:frame.height*.4}});assert(Math.abs(await page.evaluate(()=>MZDebug.getCamera().stops[MZDebug.state.cameraIndex].fx)-.7)<.02);
+ // Motion Zoom 2.0: a box drawn around a word frames the selected view.
+ await page.evaluate(()=>document.getElementById('camera-map').scrollIntoView({block:'center'}));const map=await page.locator('#camera-map').boundingBox();
+ await page.mouse.move(map.x+map.width*.08,map.y+map.height*.62);await page.mouse.down();await page.mouse.move(map.x+map.width*.18,map.y+map.height*.67,{steps:4});await page.mouse.move(map.x+map.width*.28,map.y+map.height*.72,{steps:4});
+ assert(await page.locator('#camera-box').isVisible(),'box is drawn while dragging');await page.mouse.up();assert(await page.locator('#camera-box').isHidden());
+ const boxed=await page.evaluate(()=>MZDebug.getCamera().stops[MZDebug.state.cameraIndex]);assert(Math.abs(boxed.fx-.18)<.03&&Math.abs(boxed.fy-.67)<.03&&Math.abs(boxed.scale-400)<=40,JSON.stringify(boxed));
+ // Fly-over path and marker timing (view 2 on marker 1, view 3 on marker 2, view 4 on marker 3).
+ await page.locator('#cam-path').selectOption('arc');assert.equal(await page.evaluate(()=>MZDebug.getCamera().stops[MZDebug.state.cameraIndex].transition.path),'arc');
+ await page.getByRole('button',{name:'Подключить выделенный слой',exact:true}).click();for(let i=0;i<40&&!(await page.evaluate(()=>!!MZDebug.state.cameraInfo&&!document.querySelector('#camera-markers-align').disabled));i++)await page.waitForTimeout(100);
+ {const marks=[1.6,3.2,5].map(t=>({start:new f.ctx.Time(t)}));f.ctx.app.project.activeSequence.markers={getFirstMarker:()=>marks[0],getNextMarker:m=>marks[marks.indexOf(m)+1]||null};}
+ await page.locator('#camera-markers-align').click();await page.waitForTimeout(300);
+ const arrivals=await page.evaluate(()=>{const c=MZDebug.getCamera();return MZEngine.camera(c.stops,Object.assign({},c.options,{fitFrames:null}),25).arrivals;});assert.deepEqual(arrivals.slice(1),[40,80,125],JSON.stringify(arrivals));
+ assert.match(await page.locator('#status').innerText(),/По маркерам: 3/);
  for(const section of ['assets','sounds','tools','automation']){await nav(section);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
  await page.locator('[data-dock="settings"]').click();await page.locator('#settings-lang').selectOption('en');assert.equal(await page.locator('[data-dock="home"]').innerText(),'Home');await page.locator('#settings-lang').selectOption('ru');
  const before=f.mutations();

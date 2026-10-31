@@ -46,6 +46,7 @@ function clip(name,start,duration,options={}){
 function fixture(clips=[clip('Photo',12,3)],options={}){
  let mutations=0;
  const sequence={sequenceID:'sequence-test-01',frameSizeHorizontal:options.width||1920,frameSizeVertical:options.height||1080,getPlayerPosition:()=>new Time(options.playhead??12),timebase:String(TICKS/(options.fps??25)),videoTracks:collection([{clips:collection(clips),isLocked:()=>!!options.locked}],'numTracks')};
+ if(options.markers){const list=options.markers.map(t=>({start:new Time(t)}));sequence.markers={numMarkers:list.length,getFirstMarker:()=>list[0]||null,getNextMarker:m=>list[list.indexOf(m)+1]||null};}
  const qitems=[];
  for(const c of clips){
   qitems.push({type:'Empty',name:'',start:{secs:0},end:{secs:Number(c.start.ticks)/TICKS}});

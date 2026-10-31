@@ -98,13 +98,16 @@ var MZMotion = (function () {
         if(override)for(k in override)if(override.hasOwnProperty(k))o[k]=override[k];
         o.mode=o.mode||'smooth';
         if(!/^(smooth|snap|spring|linear|hold|bezier|easeIn|easeOut)$/.test(o.mode))throw new Error('Неизвестная кривая.');
-        o.move=number(o.move,0.08,5,'длительность перехода');o.settle=number(o.settle,0.08,3,'время успокоения');
-        o.overshoot=number(o.overshoot,0,0.6,'сила пружины');
+        o.move=number(typeof o.move==='undefined'?.45:o.move,0.08,5,'длительность перехода');o.settle=number(typeof o.settle==='undefined'?.3:o.settle,0.08,3,'время успокоения');
+        o.overshoot=number(typeof o.overshoot==='undefined'?0:o.overshoot,0,0.6,'сила пружины');
         o.cycles=number(typeof o.cycles==='undefined'?1:o.cycles,0.5,4,'колебания');
         o.delay=number(typeof o.delay==='undefined'?0:o.delay,-0.8,0.8,'задержка зума');
         o.x1=number(typeof o.x1==='undefined'?.2:o.x1,0,1,'ручка X1');o.x2=number(typeof o.x2==='undefined'?.3:o.x2,0,1,'ручка X2');
         o.y1=number(typeof o.y1==='undefined'?0:o.y1,-1,2,'ручка Y1');o.y2=number(typeof o.y2==='undefined'?1:o.y2,-1,2,'ручка Y2');
         if(o.mode!=='spring')o.overshoot=0;
+        // direct: one zoom about a fixed point; arc: pull back mid-flight when the
+        // next view is far away, then zoom in again (fly-over).
+        o.path=o.path==='arc'?'arc':'direct';
         return o;
     }
     function allocate(segments, fitFrames) {
@@ -146,7 +149,7 @@ var MZMotion = (function () {
             var s=stops[i];
             if(!s || typeof s!=='object') throw new Error('Не удалось прочитать ракурс.');
             number(s.fx,0,1,'центр X'); number(s.fy,0,1,'центр Y');
-            number(s.scale,100,500,'масштаб'); number(s.hold,0,10,'пауза');
+            number(s.scale,100,500,'масштаб'); number(s.hold,0,60,'пауза');
             poses.push(pose(s,protect));
             if(i) {
                 var transition=settings(defaults,s.transition);transitions[i]=transition;
@@ -174,6 +177,14 @@ var MZMotion = (function () {
             var s=zoomAt(a,b,typeof zp==='number'?zp:p,geo),w=typeof zp!=='number'&&Math.abs(b.scale-a.scale)>1e-6?(s-a.scale)/(b.scale-a.scale):p;
             return safe({scale:s,x:a.x+(b.x-a.x)*w,y:a.y+(b.y-a.y)*w},protect);
         }
+        // Fly-over: centres travel straight while the zoom dips to a level where
+        // both views fit (window = distance + half the tighter window).
+        function arc(a,b,p) {
+            var dip=arcDip(a,b);if(dip<=1e-6)return null;
+            var sa=a.scale/100,sb=b.scale/100,ca=centre(a),cb=centre(b),q=clamp(p,0,1);
+            var s=Math.exp(Math.log(sa)+(Math.log(sb)-Math.log(sa))*p-dip*Math.sin(Math.PI*q)),cx=ca.x+(cb.x-ca.x)*p,cy=ca.y+(cb.y-ca.y)*p;
+            return safe({scale:s*100,x:.5+(.5-cx)*s,y:.5+(.5-cy)*s},protect);
+        }
         add(poses[0]);
         for(i=0;i<segments.length;i++) {
             var seg=segments[i], j, u, p;
@@ -188,7 +199,7 @@ var MZMotion = (function () {
                 if(seg.type==='move'&&cfg.delay!==0){
                     var zoomU=cfg.delay>0?(u-cfg.delay)/(1-cfg.delay):u/(1+cfg.delay);
                     result=between(poses[seg.to-1],poses[seg.to],p,(1+overshoot)*ease(clamp(zoomU,0,1),cfg),cfg.mode!=='linear');
-                } else result=between(poses[seg.to-1],poses[seg.to],p,undefined,cfg.mode!=='linear');
+                } else result=(seg.type==='move'&&cfg.path==='arc'&&arc(poses[seg.to-1],poses[seg.to],p))||between(poses[seg.to-1],poses[seg.to],p,undefined,cfg.mode!=='linear');
                 add(result);
             }
             if(seg.type==='settle' || overshoot===0) arrivals[seg.to]=frame;
@@ -201,6 +212,35 @@ var MZMotion = (function () {
         }
         return {keys:keys,frames:frame,seconds:frame/fps,fps:fps,arrivals:arrivals};
     }
+    // Marker timing: view i+1 arrives on marker i. Holds absorb the gaps; a move
+    // that cannot fit is shortened (minimum 2 frames). Times are seconds from
+    // the route start; frames follow build() rounding exactly.
+    function alignToMarkers(stops,defaults,times,fps){
+        number(fps,1,240,'частота кадров');
+        var out=[],marks=[],i,k,d={move:.45,settle:.3,overshoot:0};for(k in defaults||{})if(defaults.hasOwnProperty(k))d[k]=defaults[k];var base=settings(d);
+        for(i=0;i<stops.length;i++){var c={};for(k in stops[i])if(stops[i].hasOwnProperty(k))c[k]=stops[i][k];var tr={};if(stops[i].transition)for(k in stops[i].transition)if(stops[i].transition.hasOwnProperty(k))tr[k]=stops[i].transition[k];if(i)c.transition=tr;out.push(c);}
+        for(i=0;i<(times||[]).length;i++){var f=Math.round(Number(times[i])*fps);if(isFinite(f)&&f>0&&(!marks.length||marks[marks.length-1]!==f))marks.push(f);}
+        marks.sort(function(a,b){return a-b;});
+        var views=out.length-1,n=Math.min(views,marks.length),previous=0,shortened=[];
+        for(i=1;i<=n;i++){
+            var cfg=settings(base,out[i].transition),move=Math.max(2,Math.round(cfg.move*fps)),settle=cfg.overshoot>0?Math.max(2,Math.round(cfg.settle*fps)):0,hold=marks[i-1]-previous-move-settle;
+            if(hold<0){var fitted=Math.max(2,move+hold);hold+=move-fitted;move=fitted;if(hold<0)throw new Error('Маркер '+i+' слишком близко к предыдущему: перелёт к ракурсу '+(i+1)+' не успевает. Раздвинь маркеры.');shortened.push(i+1);out[i].transition.move=move/fps;}
+            if(hold/fps>60)throw new Error('Между маркерами больше 60 секунд.');
+            out[i-1].hold=hold/fps;previous=marks[i-1];
+        }
+        return {stops:out,used:n,ignored:Math.max(0,marks.length-views),missing:views-n,shortened:shortened};
+    }
+    function centre(p){var s=p.scale/100;return {x:.5-(p.x-.5)/s,y:.5-(p.y-.5)/s};}
+    // Pull back only between two close-ups whose next word lies outside the
+    // current window; flights from or to the overview are already wide.
+    function arcDip(a,b){var sa=a.scale/100,sb=b.scale/100,ca=centre(a),cb=centre(b),d=Math.max(Math.abs(cb.x-ca.x),Math.abs(cb.y-ca.y)),low=Math.min(sa,sb);if(low<=1.05||d<=.5/low)return 0;var mid=Math.max(1,Math.min(Math.sqrt(sa*sb),1/(d+.5/low)));return Math.max(0,Math.log(Math.sqrt(sa*sb))-Math.log(mid));}
+    // A box drawn around a word (frame fractions) becomes a view: centred on the
+    // box, scaled so the box fills 80% of the frame on its tighter side.
+    function fitBox(x0,y0,x1,y1){
+        var l=clamp(Math.min(x0,x1),0,1),r=clamp(Math.max(x0,x1),0,1),t=clamp(Math.min(y0,y1),0,1),b=clamp(Math.max(y0,y1),0,1),size=Math.max(r-l,b-t);
+        if(!(size>0))throw new Error('Обведи слово рамкой.');
+        return {fx:(l+r)/2,fy:(t+b)/2,scale:Math.round(clamp(100/(1.25*size),100,500))};
+    }
     function sample(route, frame) {
         var k=route.keys;
         if(frame<=k[0].frame) return k[0];
@@ -210,6 +250,6 @@ var MZMotion = (function () {
         }
         return k[k.length-1];
     }
-    return {build:build,sample:sample,pose:pose,number:number,ease:ease,settings:settings};
+    return {build:build,sample:sample,pose:pose,number:number,ease:ease,settings:settings,fitBox:fitBox,alignToMarkers:alignToMarkers,arcDip:function(a,b,protect){return arcDip(pose(a,protect!==false),pose(b,protect!==false));}};
 }());
 if(typeof module!=='undefined' && module.exports) module.exports=MZMotion;

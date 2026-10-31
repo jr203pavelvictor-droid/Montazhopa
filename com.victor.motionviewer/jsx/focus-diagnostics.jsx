@@ -1,9 +1,20 @@
 /* Explicit target bindings. Public DOM data; QE insertion only after all preflight. */
+// Motion Zoom layer: an Adjustment Layer, or a clip that fills the frame exactly
+// (same picture as the captured frame, so map points stay true). Anything else
+// (letterboxed, cropped, rotated, animated Motion) needs an Adjustment Layer.
+MZ.cameraLayer=function(seq,target){
+ var clip=target.clip;if(clip.isAdjustmentLayer&&clip.isAdjustmentLayer())return 'adjustment';
+ var o=MZ.load()[MZ.key(seq,target)],owned=o&&o.match==='AE.ADBE Geometry2'?o.index:-1,g;
+ try{g=MZ.edgeGeometry(seq,target,owned);}catch(e){throw Error('MZ_CAMERA_CLIP_UNSUPPORTED');}
+ var tx=Math.max(2,g.frameW*.004),ty=Math.max(2,g.frameH*.004);
+ if(Math.abs(g.width-g.frameW)>tx||Math.abs(g.height-g.frameH)>ty||Math.abs(g.cx-g.frameW/2)>tx||Math.abs(g.cy-g.frameH/2)>ty)throw Error('MZ_CAMERA_CLIP_NOT_FULL_FRAME');
+ return 'clip';
+};
 MZ.boundCamera=function(binding){
- var seq=app.project.activeSequence;if(!seq||!binding||String(seq.sequenceID)!==String(binding.sequenceID))throw Error('Вернись в секвенцию подключённого Adjustment Layer.');
+ var seq=app.project.activeSequence;if(!seq||!binding||String(seq.sequenceID)!==String(binding.sequenceID))throw Error('Вернись в секвенцию подключённого слоя.');
  var target={nodeId:String(binding.nodeId),trackIndex:Number(binding.trackIndex),start:binding.start,end:binding.end},clip=VMV.publicClip(seq,target);target.clip=clip;target.name=String(clip.name);
- if(!clip.isAdjustmentLayer||!clip.isAdjustmentLayer())throw Error('Подключённый слой больше не является Adjustment Layer.');
- if(seq.videoTracks[target.trackIndex].isLocked())throw Error('Дорожка Adjustment Layer заблокирована.');
+ MZ.cameraLayer(seq,target);
+ if(seq.videoTracks[target.trackIndex].isLocked())throw Error('Дорожка подключённого слоя заблокирована.');
  var plan=VMV.makePlan(seq,target,{group:'CAMERA',duration:0,title:'Motion Zoom'});
  return {seq:seq,target:target,plan:plan,width:Number(seq.frameSizeHorizontal),height:Number(seq.frameSizeVertical),playhead:VMV.seconds(seq.getPlayerPosition())};
 };
@@ -79,3 +90,13 @@ MZ.inspectProject=function(){try{
  }catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.revealProjectObject=function(nodeId){try{var found=null;function visit(item){if(String(item.nodeId)===String(nodeId))found=item;if(item.children)for(var i=0;i<item.children.numItems;i++)visit(item.children[i]);}visit(app.project.rootItem);if(!found||!app.project.selectItem)throw Error('Переход к этому объекту API не поддерживает; найди его по имени в Project.');app.project.selectItem(found);return VMV.encode({ok:true});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.editContext=function(){try{var seq=app.project.activeSequence;if(!seq)throw Error('Open a sequence');return VMV.encode({ok:true,token:VMV.encode({project:MZ.projectKey(),sequence:String(seq.sequenceID)})});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
+
+/* Sequence markers inside the bound layer, as seconds from the route start. */
+MZ.cameraMarkers=function(binding,start){try{
+ var c=MZ.boundCamera(binding),offset=0;
+ if(start==='playhead'){if(c.playhead<c.target.start||c.playhead>=c.target.end)throw Error('Playhead must be inside layer');offset=Math.ceil((c.playhead-c.target.start)/c.plan.frame-.000001)*c.plan.frame;}
+ var origin=c.target.start+offset,times=[],markers=c.seq.markers,m=markers&&markers.getFirstMarker?markers.getFirstMarker():null,guard=0;
+ while(m&&guard++<5000){var at=VMV.seconds(m.start);if(at>origin+c.plan.frame*.5&&at<c.target.end)times.push(at-origin);m=markers.getNextMarker(m);}
+ times.sort(function(a,b){return a-b;});
+ return VMV.encode({ok:true,times:times,fps:1/c.plan.frame,origin:origin});
+}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
