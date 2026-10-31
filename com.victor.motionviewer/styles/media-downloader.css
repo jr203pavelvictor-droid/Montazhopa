@@ -1,0 +1,20 @@
+/* ALTO / yt-dlp — narrow Premiere panel layout, light/dark theme tokens */
+.dl-engine{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.dl-engine strong{min-width:0;overflow-wrap:anywhere;font-size:11px}
+.dl-engine button{max-width:100%;width:auto!important;margin:0!important}
+.dl-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0}
+.dl-row button{width:auto!important;max-width:100%;flex:1 1 auto;white-space:normal;margin:0!important}
+.dl-row .dl-cancel{flex:0 0 auto}
+.dl-field{display:flex;flex-direction:column;gap:6px;margin:12px 0;font-size:11px;color:var(--alto-secondary,var(--muted))}
+.dl-field>input,.dl-field>select{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding:10px;border-radius:11px;font-size:12px;color:var(--alto-foreground,var(--ink))}
+.dl-analyze{width:auto!important;margin:3px 0!important;min-height:34px}
+.dl-folder{display:flex;align-items:center;gap:8px;justify-content:space-between;border:1px solid var(--alto-line,var(--rim));padding:12px;margin:12px 0;border-radius:12px}
+.dl-folder-path{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.dl-folder-path span,.dl-path{font-size:10px;overflow-wrap:anywhere;word-break:break-word;color:var(--alto-secondary,var(--muted))}
+.dl-folder button{width:auto!important;flex:0 0 auto;max-width:45%;margin:0!important}
+.dl-video-info{display:flex;flex-direction:column;gap:4px;padding:11px;margin:10px 0;border-radius:12px;background:var(--alto-field,var(--surface));font-size:11px}
+.dl-video-info small{color:var(--alto-secondary,var(--muted));line-height:1.5}
+.dl-check{display:flex;align-items:center;gap:8px;margin:12px 0;color:var(--alto-foreground,var(--ink));font-size:11px}
+.dl-check input{flex:0 0 auto;width:16px;height:16px;margin:0}
+.dl-progress{font-size:11px;color:var(--alto-secondary,var(--muted));overflow-wrap:anywhere;min-height:16px}
+@media(max-width:350px){.dl-row{gap:6px}.dl-row button{font-size:10px;padding:8px}.dl-folder{padding:8px}}

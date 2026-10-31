@@ -45,10 +45,11 @@ var MZEngine=(function(){
   var o=options(raw),duration=seconds||o.duration,n=Math.max(1,Math.floor(duration*fps+.000001)),axes=['scale','x','y','rotation','opacity','sx','sy'],spec={title:kind,name:'MZ / '+kind,group:kind==='photo'||o.phase==='hold'?'PHOTO':o.phase==='out'?'OUT':'IN',duration:n/fps,shutter:o.shutter};
   if(kind==='shadow'){spec.group='SHD';spec.duration=0;spec.shadow=[[o.opacity/100,o.angle,o.distance,o.softness]];return spec;}
   if(n>18000)throw Error('Animation exceeds 18000 frames');
-  // Native endpoint animation: never approximate Bezier with a cloud of linear keys.
-  // CEP cannot set temporal handle velocities (НЕ ПОДДЕРЖИВАЕТСЯ).
-  var nativePair=/^(move|photo|fade|transition-slide|transition-zoom|transition-dip)$/.test(kind)&&o.phase!=='accent'&&/^(linear|smooth)$/.test(o.easing);
-  if(nativePair){spec.interpolation=o.easing==='linear'?0:5;for(var b=0;b<axes.length;b++){var ax=axes[b],start=sample(kind,o,0)[ax],end=sample(kind,o,1)[ax];if(Math.abs(start-end)>.00000001)spec[ax]=[[0,start],[n/fps,end]];}return spec;}
+  // Real PPRO 26.5.2 ignores temporal easing for Transform Position. Keep two
+  // endpoints for Linear; other curves use the shared preview model and bounded
+  // simplification below. Do not claim that a successful enum setter means easing.
+  var nativePair=/^(move|photo|fade|transition-slide|transition-zoom|transition-dip)$/.test(kind)&&o.phase!=='accent'&&o.easing==='linear';
+  if(nativePair){spec.interpolation=0;for(var b=0;b<axes.length;b++){var ax=axes[b],start=sample(kind,o,0)[ax],end=sample(kind,o,1)[ax];if(Math.abs(start-end)>.00000001)spec[ax]=[[0,start],[n/fps,end]];}return spec;}
   for(var a=0;a<axes.length;a++){
    var axis=axes[a],points=[],base=/^(scale|sx|sy|opacity)$/.test(axis)?100:0,changed=false;
    for(var f=0;f<=n;f++){var v=sample(kind,o,f/n)[axis];points.push([f/fps,v]);if(Math.abs(v-base)>.00000001)changed=true;}
@@ -65,7 +66,7 @@ var MZEngine=(function(){
  // every monotonic native trajectory, including fractional positions between frames.
  function requiredScale(g,x,y){return Math.max(100,100*(g.frameW+2*Math.abs(g.cx-g.frameW/2+x*g.width)+2)/g.width,100*(g.frameH+2*Math.abs(g.cy-g.frameH/2+y*g.height)+2)/g.height);}
  function covers(g,x,y,scale){var cx=g.cx+x*g.width,cy=g.cy+y*g.height,w=g.width*scale/100,h=g.height*scale/100;return cx-w/2<=.01&&cy-h/2<=.01&&cx+w/2>=g.frameW-.01&&cy+h/2>=g.frameH-.01;}
- function protect(spec,g,fps){var needed=100,frames=Math.ceil(spec.duration*fps);for(var f=0;f<=frames;f++){var t=Math.min(spec.duration,f/fps);needed=Math.max(needed,requiredScale(g,spec.x?value(spec.x,t):0,spec.y?value(spec.y,t):0));}if(spec.x)for(var i=0;i<spec.x.length;i++)needed=Math.max(needed,requiredScale(g,spec.x[i][1],0));if(spec.y)for(var j=0;j<spec.y.length;j++)needed=Math.max(needed,requiredScale(g,0,spec.y[j][1]));needed=Math.ceil(needed*100)/100;if(needed>1000)throw Error('MZ_EDGE_SCALE_LIMIT');if(spec.scale){for(var k=0;k<spec.scale.length;k++)spec.scale[k][1]=Math.max(spec.scale[k][1],needed);}else spec.scale=[[0,needed],[spec.duration,needed]];spec.protection=g;return spec;}
+ function protect(spec,g,fps){var needed=100,frames=Math.ceil(spec.duration*fps);for(var f=0;f<=frames;f++){var t=Math.min(spec.duration,f/fps);needed=Math.max(needed,requiredScale(g,spec.x?value(spec.x,t):0,spec.y?value(spec.y,t):0));}if(spec.x)for(var i=0;i<spec.x.length;i++)needed=Math.max(needed,requiredScale(g,spec.x[i][1],0));if(spec.y)for(var j=0;j<spec.y.length;j++)needed=Math.max(needed,requiredScale(g,0,spec.y[j][1]));needed=Math.ceil(needed*100)/100;if(needed>1000)throw Error('MZ_EDGE_SCALE_LIMIT');if(spec.scale){for(var k=0;k<spec.scale.length;k++)spec.scale[k][1]=Math.max(spec.scale[k][1],needed);spec.scale=simplify(spec.scale,.025);}else spec.scale=[[0,needed],[spec.duration,needed]];spec.protection=g;return spec;}
  return {options:options,sample:sample,build:build,value:value,simplify:simplify,ease:ease,camera:camera,directions:directions,direction:direction,requiredScale:requiredScale,covers:covers,protect:protect};
 }());
 if(typeof module!=='undefined'&&module.exports)module.exports=MZEngine;

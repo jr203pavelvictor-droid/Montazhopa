@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 451 112" role="img" aria-label="ALTO">
+ <g><defs><mask id="cut"><rect width="115" height="115" fill="white"/><path d="M32 77 L92 56" stroke="black" stroke-width="5" stroke-linecap="butt"/></mask></defs>
+ <g mask="url(#cut)" fill="#111923"><path d="M5 101 45 11 64 11 106 101 85 101 55 35 27 101Z"/><path d="M34 77 81 61 77 52 39 65Z"/></g></g><g fill="#111923">
+ <path d="M139 11 H159 V83 H215 V101 H139 Z"/>
+ <path d="M233 11 H322 V29 H288 V101 H267 V29 H233 Z"/>
+ <path fill-rule="evenodd" transform="translate(20 0)" d="M373 9 C404 9 425 29 425 56 C425 84 404 103 373 103 C342 103 321 84 321 56 C321 29 342 9 373 9 Z M373 27 C354 27 342 39 342 56 C342 73 354 85 373 85 C392 85 404 73 404 56 C404 39 392 27 373 27 Z"/>
+ </g></svg>

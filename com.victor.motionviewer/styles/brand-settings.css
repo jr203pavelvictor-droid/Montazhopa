@@ -1,0 +1,24 @@
+/* ALTO 4.0 Design Preview — approved Precision-Cut wordmark + Settings-only brand cover. */
+.wordmark{align-items:center;gap:7px}
+.brand-symbol{position:relative;display:block;flex:0 0 29px!important;width:29px!important;height:31px!important;filter:none!important}
+.brand-symbol img{display:block;width:100%;height:100%;object-fit:contain}
+.brand-type{align-items:flex-start;gap:1px}
+.brand-lettering{display:block;position:relative;width:76px!important;height:23px;flex:0 0 23px}
+.brand-lettering img{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.brand-icon-light,.brand-wordmark-light{display:none!important}
+html[data-theme="light"] .brand-icon-light,html[data-theme="light"] .brand-wordmark-light{display:block!important}
+html[data-theme="light"] .brand-icon-dark,html[data-theme="light"] .brand-wordmark-dark{display:none!important}
+.wordmark small{font-size:6px!important;letter-spacing:1.15px!important;line-height:1.2;color:var(--alto-secondary);margin:0!important}
+.settings-banner{position:relative;width:100%;margin:10px 0 18px;border-radius:21px;overflow:hidden;background:#e7e9e9;border:1px solid var(--alto-line);box-shadow:0 12px 28px #0a14211c;line-height:0}
+.settings-banner img{width:100%;height:auto;display:block;object-fit:cover;object-position:center;max-height:275px}
+.settings-banner:after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;box-shadow:inset 0 1px 1px #ffffff80,inset 0 0 0 1px #ffffff20}
+.settings-nav{display:flex;gap:7px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain;margin:0 0 15px;padding:1px 1px 8px}
+.settings-nav button{border-radius:12px;flex:0 0 auto;white-space:nowrap;min-height:32px;padding:7px 11px;font-size:9px;background:var(--alto-field);border:1px solid var(--alto-line);color:var(--alto-foreground)}
+.settings-nav button:hover{background:var(--alto-selected)}
+.settings-content{display:grid;grid-template-columns:minmax(0,1fr);gap:13px;align-items:start}
+.settings-content>.panel{min-width:0;margin:0;scroll-margin-top:12px}
+.settings-content .panel button{max-width:100%}
+.settings-content .panel .button-row{display:flex;flex-wrap:wrap;gap:8px}
+@media(min-width:720px){.settings-content{grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.settings-banner{max-height:260px}.settings-banner img{max-height:260px;object-fit:contain;object-position:center;background:#e5e7e8}}
+@media(max-width:359px){.brand-symbol{width:24px!important;flex-basis:24px!important;height:27px!important}.brand-lettering{width:65px!important}.settings-banner{border-radius:16px;margin-top:8px}.settings-nav button{font-size:8px;padding:6px 9px}}
+@media(prefers-reduced-motion:reduce){.settings-nav button{transition:none!important}}

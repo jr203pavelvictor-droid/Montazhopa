@@ -35,7 +35,23 @@ MZ.curves=function(comp){
   }out.push([i,samples]);
  }return VMV.encode(out);
 };
-MZ.owner=function(seq,target,data){var o=data[MZ.key(seq,target)];if(!o)return null;var c=target.clip.components[o.index];if(!c||String(c.matchName)!==o.match||VMV.fingerprint(c)!==o.fingerprint||(o.curves&&MZ.curves(c)!==o.curves))throw Error('MZ_OWNERSHIP_CHANGED');return o;};
+MZ.sameFingerprint=function(a,b){
+ if(a===b)return true;
+ // Premiere updates/localizes display labels asynchronously (Scale -> Scale Height).
+ // Component matchName, ordered parameter values, keys and curve samples carry identity.
+ try{var left=MZJSON.parse(a),right=MZJSON.parse(b);if(!(left instanceof Array)||!(right instanceof Array)||left.length!==right.length)return false;for(var i=0;i<left.length;i++){delete left[i].name;delete right[i].name;}return VMV.encode(left)===VMV.encode(right);}catch(e){return false;}
+};
+MZ.owner=function(seq,target,data){
+ var o=data[MZ.key(seq,target)];if(!o)return null;
+ var components=target.clip.components,c=components[o.index],hasMatch=false;
+ for(var i=0;i<components.numItems;i++)if(String(components[i].matchName)===o.match)hasMatch=true;
+ // Native Undo can remove the QE-added component without undoing our sidecar.
+ // Retain its receipt for Redo, but do not block a new apply when it is absent.
+ // An existing component of the same kind still requires exact verification.
+ if(!hasMatch)return null;
+ if(!c||String(c.matchName)!==o.match||!MZ.sameFingerprint(VMV.fingerprint(c),o.fingerprint)||(o.curves&&MZ.curves(c)!==o.curves))throw Error('MZ_OWNERSHIP_CHANGED');
+ return o;
+};
 MZ.selection=function(){try{var seq=app.project.activeSequence,targets=VMV.getTargets(seq),data=MZ.load(),rows=[],conflicts=0;for(var i=0;i<targets.length;i++){var t=targets[i],o=MZ.owner(seq,t,data);if(o)conflicts++;rows.push({nodeId:t.nodeId,trackIndex:t.trackIndex,start:t.start,end:t.end,name:t.name,owned:!!o});}return VMV.encode({ok:true,rows:rows,count:rows.length,conflicts:conflicts,sequence:String(seq.sequenceID),fps:VMV.TICKS/Number(seq.timebase),saved:!!app.project.path,token:VMV.encode({project:MZ.projectKey(),sequence:String(seq.sequenceID),rows:rows})});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.resetOwned=function(comp,o){if(o.defaults)MZ.restore(comp,o.defaults);else throw Error('Missing original MZ defaults');};
 MZ.apply=function(request){
@@ -72,7 +88,7 @@ MZ.apply=function(request){
    if(match==='AE.ADBE Geometry2')VMV.configureTransform(comp,specs[i],plans[i]);else VMV.configureShadow(comp,specs[i].shadow[0]);
    next[MZ.key(seq,targets[i])]={index:old?old.index:targets[i].clip.components.numItems-1,match:match,qeIndex:old?old.qeIndex:Number(qt[i].numComponents)-1,fingerprint:VMV.fingerprint(comp),defaults:defaults[i],kind:request.kind,options:options,interpolation:plans[i].interpolation,curves:MZ.curves(comp)};
   }
-  MZ.persist(next);if(cross){var removalError=null;try{qt[0].getComponentAt(cross.qeIndex).remove();}catch(re){removalError=re;}if(targets[0].clip.components.numItems!==cross.index+1){MZ.persist(data);throw removalError||Error('Old effect could not be removed');}if(VMV.fingerprint(targets[0].clip.components[cross.index])!==next[MZ.key(seq,targets[0])].fingerprint)throw Error('Effect replacement verification failed');}var keys=0;for(i=0;i<plans.length;i++)keys+=plans[i].verifiedKeys||0;
+  MZ.persist(next);if(cross){var removalError=null;try{qt[0].getComponentAt(cross.qeIndex).remove();}catch(re){removalError=re;}if(targets[0].clip.components.numItems!==cross.index+1){MZ.persist(data);throw removalError||Error('Old effect could not be removed');}if(!MZ.sameFingerprint(VMV.fingerprint(targets[0].clip.components[cross.index]),next[MZ.key(seq,targets[0])].fingerprint))throw Error('Effect replacement verification failed');}var keys=0;for(i=0;i<plans.length;i++)keys+=plans[i].verifiedKeys||0;
   return VMV.encode({ok:true,count:targets.length,keys:keys,replaced:check.conflicts,saved:!!app.project.path});
  }catch(e){var restoreErrors=0,restoreErrorDetails=[];for(var r=restores.length-1;r>=0;r--)try{MZ.restore(restores[r].comp,restores[r].snapshot);}catch(ignored){restoreErrors++;restoreErrorDetails.push(String(ignored.message||ignored));}var left=seq?VMV.rollback(seq,records):0;return VMV.encode({ok:false,error:String(e.message||e),remainingEffects:left,restoreErrors:restoreErrors,restoreErrorDetails:restoreErrorDetails});}
 };

@@ -438,7 +438,7 @@ VMV.writeKeys = function (param, entries, plan) {
         }
     }
     plan.verifiedKeys=(plan.verifiedKeys||0)+entries.length;
-    if (plan.interpolation===5 && entries.length===2) VMV.verifyBezier(param,entries,plan);
+    if ((plan.interpolation===3 || plan.interpolation===5) && entries.length===2) VMV.verifyBezier(param,entries,plan);
 };
 VMV.verifyBezier = function(param,entries,plan) {
     // НЕ ПОДДЕРЖИВАЕТСЯ: чтение interpolation enum и управление Bezier handles.
@@ -832,10 +832,11 @@ var MZEngine=(function(){
   var o=options(raw),duration=seconds||o.duration,n=Math.max(1,Math.floor(duration*fps+.000001)),axes=['scale','x','y','rotation','opacity','sx','sy'],spec={title:kind,name:'MZ / '+kind,group:kind==='photo'||o.phase==='hold'?'PHOTO':o.phase==='out'?'OUT':'IN',duration:n/fps,shutter:o.shutter};
   if(kind==='shadow'){spec.group='SHD';spec.duration=0;spec.shadow=[[o.opacity/100,o.angle,o.distance,o.softness]];return spec;}
   if(n>18000)throw Error('Animation exceeds 18000 frames');
-  // Native endpoint animation: never approximate Bezier with a cloud of linear keys.
-  // CEP cannot set temporal handle velocities (НЕ ПОДДЕРЖИВАЕТСЯ).
-  var nativePair=/^(move|photo|fade|transition-slide|transition-zoom|transition-dip)$/.test(kind)&&o.phase!=='accent'&&/^(linear|smooth)$/.test(o.easing);
-  if(nativePair){spec.interpolation=o.easing==='linear'?0:5;for(var b=0;b<axes.length;b++){var ax=axes[b],start=sample(kind,o,0)[ax],end=sample(kind,o,1)[ax];if(Math.abs(start-end)>.00000001)spec[ax]=[[0,start],[n/fps,end]];}return spec;}
+  // Real PPRO 26.5.2 ignores temporal easing for Transform Position. Keep two
+  // endpoints for Linear; other curves use the shared preview model and bounded
+  // simplification below. Do not claim that a successful enum setter means easing.
+  var nativePair=/^(move|photo|fade|transition-slide|transition-zoom|transition-dip)$/.test(kind)&&o.phase!=='accent'&&o.easing==='linear';
+  if(nativePair){spec.interpolation=0;for(var b=0;b<axes.length;b++){var ax=axes[b],start=sample(kind,o,0)[ax],end=sample(kind,o,1)[ax];if(Math.abs(start-end)>.00000001)spec[ax]=[[0,start],[n/fps,end]];}return spec;}
   for(var a=0;a<axes.length;a++){
    var axis=axes[a],points=[],base=/^(scale|sx|sy|opacity)$/.test(axis)?100:0,changed=false;
    for(var f=0;f<=n;f++){var v=sample(kind,o,f/n)[axis];points.push([f/fps,v]);if(Math.abs(v-base)>.00000001)changed=true;}
@@ -852,7 +853,7 @@ var MZEngine=(function(){
  // every monotonic native trajectory, including fractional positions between frames.
  function requiredScale(g,x,y){return Math.max(100,100*(g.frameW+2*Math.abs(g.cx-g.frameW/2+x*g.width)+2)/g.width,100*(g.frameH+2*Math.abs(g.cy-g.frameH/2+y*g.height)+2)/g.height);}
  function covers(g,x,y,scale){var cx=g.cx+x*g.width,cy=g.cy+y*g.height,w=g.width*scale/100,h=g.height*scale/100;return cx-w/2<=.01&&cy-h/2<=.01&&cx+w/2>=g.frameW-.01&&cy+h/2>=g.frameH-.01;}
- function protect(spec,g,fps){var needed=100,frames=Math.ceil(spec.duration*fps);for(var f=0;f<=frames;f++){var t=Math.min(spec.duration,f/fps);needed=Math.max(needed,requiredScale(g,spec.x?value(spec.x,t):0,spec.y?value(spec.y,t):0));}if(spec.x)for(var i=0;i<spec.x.length;i++)needed=Math.max(needed,requiredScale(g,spec.x[i][1],0));if(spec.y)for(var j=0;j<spec.y.length;j++)needed=Math.max(needed,requiredScale(g,0,spec.y[j][1]));needed=Math.ceil(needed*100)/100;if(needed>1000)throw Error('MZ_EDGE_SCALE_LIMIT');if(spec.scale){for(var k=0;k<spec.scale.length;k++)spec.scale[k][1]=Math.max(spec.scale[k][1],needed);}else spec.scale=[[0,needed],[spec.duration,needed]];spec.protection=g;return spec;}
+ function protect(spec,g,fps){var needed=100,frames=Math.ceil(spec.duration*fps);for(var f=0;f<=frames;f++){var t=Math.min(spec.duration,f/fps);needed=Math.max(needed,requiredScale(g,spec.x?value(spec.x,t):0,spec.y?value(spec.y,t):0));}if(spec.x)for(var i=0;i<spec.x.length;i++)needed=Math.max(needed,requiredScale(g,spec.x[i][1],0));if(spec.y)for(var j=0;j<spec.y.length;j++)needed=Math.max(needed,requiredScale(g,0,spec.y[j][1]));needed=Math.ceil(needed*100)/100;if(needed>1000)throw Error('MZ_EDGE_SCALE_LIMIT');if(spec.scale){for(var k=0;k<spec.scale.length;k++)spec.scale[k][1]=Math.max(spec.scale[k][1],needed);spec.scale=simplify(spec.scale,.025);}else spec.scale=[[0,needed],[spec.duration,needed]];spec.protection=g;return spec;}
  return {options:options,sample:sample,build:build,value:value,simplify:simplify,ease:ease,camera:camera,directions:directions,direction:direction,requiredScale:requiredScale,covers:covers,protect:protect};
 }());
 if(typeof module!=='undefined'&&module.exports)module.exports=MZEngine;
@@ -919,7 +920,23 @@ MZ.curves=function(comp){
   }out.push([i,samples]);
  }return VMV.encode(out);
 };
-MZ.owner=function(seq,target,data){var o=data[MZ.key(seq,target)];if(!o)return null;var c=target.clip.components[o.index];if(!c||String(c.matchName)!==o.match||VMV.fingerprint(c)!==o.fingerprint||(o.curves&&MZ.curves(c)!==o.curves))throw Error('MZ_OWNERSHIP_CHANGED');return o;};
+MZ.sameFingerprint=function(a,b){
+ if(a===b)return true;
+ // Premiere updates/localizes display labels asynchronously (Scale -> Scale Height).
+ // Component matchName, ordered parameter values, keys and curve samples carry identity.
+ try{var left=MZJSON.parse(a),right=MZJSON.parse(b);if(!(left instanceof Array)||!(right instanceof Array)||left.length!==right.length)return false;for(var i=0;i<left.length;i++){delete left[i].name;delete right[i].name;}return VMV.encode(left)===VMV.encode(right);}catch(e){return false;}
+};
+MZ.owner=function(seq,target,data){
+ var o=data[MZ.key(seq,target)];if(!o)return null;
+ var components=target.clip.components,c=components[o.index],hasMatch=false;
+ for(var i=0;i<components.numItems;i++)if(String(components[i].matchName)===o.match)hasMatch=true;
+ // Native Undo can remove the QE-added component without undoing our sidecar.
+ // Retain its receipt for Redo, but do not block a new apply when it is absent.
+ // An existing component of the same kind still requires exact verification.
+ if(!hasMatch)return null;
+ if(!c||String(c.matchName)!==o.match||!MZ.sameFingerprint(VMV.fingerprint(c),o.fingerprint)||(o.curves&&MZ.curves(c)!==o.curves))throw Error('MZ_OWNERSHIP_CHANGED');
+ return o;
+};
 MZ.selection=function(){try{var seq=app.project.activeSequence,targets=VMV.getTargets(seq),data=MZ.load(),rows=[],conflicts=0;for(var i=0;i<targets.length;i++){var t=targets[i],o=MZ.owner(seq,t,data);if(o)conflicts++;rows.push({nodeId:t.nodeId,trackIndex:t.trackIndex,start:t.start,end:t.end,name:t.name,owned:!!o});}return VMV.encode({ok:true,rows:rows,count:rows.length,conflicts:conflicts,sequence:String(seq.sequenceID),fps:VMV.TICKS/Number(seq.timebase),saved:!!app.project.path,token:VMV.encode({project:MZ.projectKey(),sequence:String(seq.sequenceID),rows:rows})});}catch(e){return VMV.encode({ok:false,error:String(e.message||e)});}};
 MZ.resetOwned=function(comp,o){if(o.defaults)MZ.restore(comp,o.defaults);else throw Error('Missing original MZ defaults');};
 MZ.apply=function(request){
@@ -956,7 +973,7 @@ MZ.apply=function(request){
    if(match==='AE.ADBE Geometry2')VMV.configureTransform(comp,specs[i],plans[i]);else VMV.configureShadow(comp,specs[i].shadow[0]);
    next[MZ.key(seq,targets[i])]={index:old?old.index:targets[i].clip.components.numItems-1,match:match,qeIndex:old?old.qeIndex:Number(qt[i].numComponents)-1,fingerprint:VMV.fingerprint(comp),defaults:defaults[i],kind:request.kind,options:options,interpolation:plans[i].interpolation,curves:MZ.curves(comp)};
   }
-  MZ.persist(next);if(cross){var removalError=null;try{qt[0].getComponentAt(cross.qeIndex).remove();}catch(re){removalError=re;}if(targets[0].clip.components.numItems!==cross.index+1){MZ.persist(data);throw removalError||Error('Old effect could not be removed');}if(VMV.fingerprint(targets[0].clip.components[cross.index])!==next[MZ.key(seq,targets[0])].fingerprint)throw Error('Effect replacement verification failed');}var keys=0;for(i=0;i<plans.length;i++)keys+=plans[i].verifiedKeys||0;
+  MZ.persist(next);if(cross){var removalError=null;try{qt[0].getComponentAt(cross.qeIndex).remove();}catch(re){removalError=re;}if(targets[0].clip.components.numItems!==cross.index+1){MZ.persist(data);throw removalError||Error('Old effect could not be removed');}if(!MZ.sameFingerprint(VMV.fingerprint(targets[0].clip.components[cross.index]),next[MZ.key(seq,targets[0])].fingerprint))throw Error('Effect replacement verification failed');}var keys=0;for(i=0;i<plans.length;i++)keys+=plans[i].verifiedKeys||0;
   return VMV.encode({ok:true,count:targets.length,keys:keys,replaced:check.conflicts,saved:!!app.project.path});
  }catch(e){var restoreErrors=0,restoreErrorDetails=[];for(var r=restores.length-1;r>=0;r--)try{MZ.restore(restores[r].comp,restores[r].snapshot);}catch(ignored){restoreErrors++;restoreErrorDetails.push(String(ignored.message||ignored));}var left=seq?VMV.rollback(seq,records):0;return VMV.encode({ok:false,error:String(e.message||e),remainingEffects:left,restoreErrors:restoreErrors,restoreErrorDetails:restoreErrorDetails});}
 };
@@ -1065,7 +1082,7 @@ MZ.captureTimelineFrame=function(){
   var parent=new Folder(Folder.userData.fsName+'/Montazhopa3');if(!parent.exists&&!parent.create())throw Error('MZ_FRAME_FOLDER');
   var folder=new Folder(parent.fsName+'/frame-cache');if(!folder.exists&&!folder.create())throw Error('MZ_FRAME_FOLDER');
   ticket=String(new Date().getTime())+'-'+String(Math.floor(Math.random()*1000000000));
-  var base=folder.fsName+'/mz-frame-'+ticket;
+  var base=new File(folder.fsName+'/mz-frame-'+ticket).fsName;
   // No user-defined filenames or arbitrary output paths cross this boundary.
   var receipt={ticket:ticket,base:base,sequenceID:String(seq.sequenceID),name:String(seq.name||''),ticks:String(position.ticks),width:width,height:height,timecode:'',exportError:'',created:new Date().getTime()};
   MZ.frameCaptures[ticket]=receipt;
@@ -1077,7 +1094,8 @@ MZ.captureTimelineFrame=function(){
    // Adobe's QE sample convention: timecode first, destination basename second.
    // Some builds return false even when a PNG is produced. No blind retry and
    // no guessed public sequence.exportFramePNG / GUI keystrokes / AME dialogs.
-   q.exportFramePNG(receipt.timecode,base);
+   var exportStatus=q.exportFramePNG(receipt.timecode,base);
+   if(exportStatus===false)receipt.exportError='Premiere QE exportFramePNG returned false';
   }catch(exportError){receipt.exportError=String(exportError.message||exportError);}
   if(receipt.exportError==='MZ_FRAME_UNSUPPORTED'||receipt.exportError==='MZ_FRAME_SEQUENCE_CHANGED')throw Error(receipt.exportError);
   return MZ.pollTimelineFrame(ticket);

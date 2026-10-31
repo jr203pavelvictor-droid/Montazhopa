@@ -35,10 +35,12 @@
  function ensure(){
   if(ready)return ready;
   try{const version=win.MZ_VERSION;
-  const source='(function(){var encode='+encode.toString()+';try{'+
-   'if(typeof MZ===\"undefined\"||MZ.version!=='+literal(version)+'||typeof MZ.health!==\"function\"){var file=new File('+literal(bundlePath())+');if(!file.exists)throw Error(\"JSX bundle is missing: \"+file.fsName);$.evalFile(file);}' +
-   'if(typeof MZ===\"undefined\"||MZ.version!=='+literal(version)+'||typeof MZ.health!==\"function\")throw Error(\"JSX bootstrap did not initialize the expected version\");return MZ.health();'+
-   '}catch(e){return encode({ok:false,error:String(e.message||e),line:e.line||0,fileName:String(e.fileName||\"\"),number:e.number||0});}}())';
+  // evalFile inherits its caller's scope in real ExtendScript. Load at top level
+  // so subsequent evalScript commands see the initialized/replaced host globals.
+  const source='var __altoBootstrapEncode='+encode.toString()+';try{'+
+   'if(typeof MZ===\"undefined\"||MZ.version!=='+literal(version)+'||typeof MZ.health!==\"function\"){var __altoBundleFile=new File('+literal(bundlePath())+');if(!__altoBundleFile.exists)throw Error(\"JSX bundle is missing: \"+__altoBundleFile.fsName);$.evalFile(__altoBundleFile);}' +
+   'if(typeof MZ===\"undefined\"||MZ.version!=='+literal(version)+'||typeof MZ.health!==\"function\")throw Error(\"JSX bootstrap did not initialize the expected version\");MZ.health();'+
+   '}catch(e){__altoBootstrapEncode({ok:false,error:String(e.message||e),line:e.line||0,fileName:String(e.fileName||\"\"),number:e.number||0});}';
   ready=evaluate(source,'JSX bootstrap').catch(e=>{ready=null;throw e;});return ready;}catch(e){ready=null;return Promise.reject(e);}
  }
  async function call(method,args){

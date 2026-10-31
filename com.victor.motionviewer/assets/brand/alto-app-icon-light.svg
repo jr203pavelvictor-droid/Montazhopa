@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="ALTO">
+ <rect x="1" y="1" width="158" height="158" rx="36" fill="#f9fbfd"/>
+ <g transform="translate(26 24) scale(1.0)"><defs><mask id="cut"><rect width="115" height="115" fill="white"/><path d="M32 77 L92 56" stroke="black" stroke-width="5" stroke-linecap="butt"/></mask></defs>
+ <g mask="url(#cut)" fill="#121820"><path d="M5 101 45 11 64 11 106 101 85 101 55 35 27 101Z"/><path d="M34 77 81 61 77 52 39 65Z"/></g></g></svg>

@@ -435,7 +435,7 @@ VMV.writeKeys = function (param, entries, plan) {
         }
     }
     plan.verifiedKeys=(plan.verifiedKeys||0)+entries.length;
-    if (plan.interpolation===5 && entries.length===2) VMV.verifyBezier(param,entries,plan);
+    if ((plan.interpolation===3 || plan.interpolation===5) && entries.length===2) VMV.verifyBezier(param,entries,plan);
 };
 VMV.verifyBezier = function(param,entries,plan) {
     // НЕ ПОДДЕРЖИВАЕТСЯ: чтение interpolation enum и управление Bezier handles.

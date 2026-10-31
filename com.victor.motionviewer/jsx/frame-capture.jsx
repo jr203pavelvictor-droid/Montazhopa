@@ -10,7 +10,7 @@ MZ.captureTimelineFrame=function(){
   var parent=new Folder(Folder.userData.fsName+'/Montazhopa3');if(!parent.exists&&!parent.create())throw Error('MZ_FRAME_FOLDER');
   var folder=new Folder(parent.fsName+'/frame-cache');if(!folder.exists&&!folder.create())throw Error('MZ_FRAME_FOLDER');
   ticket=String(new Date().getTime())+'-'+String(Math.floor(Math.random()*1000000000));
-  var base=folder.fsName+'/mz-frame-'+ticket;
+  var base=new File(folder.fsName+'/mz-frame-'+ticket).fsName;
   // No user-defined filenames or arbitrary output paths cross this boundary.
   var receipt={ticket:ticket,base:base,sequenceID:String(seq.sequenceID),name:String(seq.name||''),ticks:String(position.ticks),width:width,height:height,timecode:'',exportError:'',created:new Date().getTime()};
   MZ.frameCaptures[ticket]=receipt;
@@ -22,7 +22,8 @@ MZ.captureTimelineFrame=function(){
    // Adobe's QE sample convention: timecode first, destination basename second.
    // Some builds return false even when a PNG is produced. No blind retry and
    // no guessed public sequence.exportFramePNG / GUI keystrokes / AME dialogs.
-   q.exportFramePNG(receipt.timecode,base);
+   var exportStatus=q.exportFramePNG(receipt.timecode,base);
+   if(exportStatus===false)receipt.exportError='Premiere QE exportFramePNG returned false';
   }catch(exportError){receipt.exportError=String(exportError.message||exportError);}
   if(receipt.exportError==='MZ_FRAME_UNSUPPORTED'||receipt.exportError==='MZ_FRAME_SEQUENCE_CHANGED')throw Error(receipt.exportError);
   return MZ.pollTimelineFrame(ticket);
