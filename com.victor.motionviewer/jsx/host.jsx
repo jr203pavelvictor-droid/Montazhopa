@@ -3,7 +3,7 @@
 #include "../engine.js"
 #include "../timeline-model.js"
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'4.0.0-beta.6',memory:{}};
+var MZ={version:'4.0.0-beta.7',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};
@@ -125,7 +125,7 @@ MZ.applyCamera=function(request){var seq=null,records=[],backup=null,component=n
 #include "api-probe.jsx"
 
 MZ.health=function(){try{
- var required={"MZ.bindFocusTargets":MZ.bindFocusTargets,"MZ.inspectProject":MZ.inspectProject,"MZ.audioDestination":MZ.audioDestination,"MZ.insertAudioRange":MZ.insertAudioRange,"MZ.captureTimelineFrame":MZ.captureTimelineFrame,"MZ.pollTimelineFrame":MZ.pollTimelineFrame,"MZ.discardTimelineFrame":MZ.discardTimelineFrame,"MZ.selection":MZ.selection,"MZ.apply":MZ.apply,"MZ.projectContext":MZ.projectContext,"MZ.importInterchange":MZ.importInterchange,"VMV.diagnostics":VMV.diagnostics,"MZ.apiProbe":MZ.apiProbe,"MZ.easingProbe":MZ.easingProbe,"VMV.getTargets":VMV.getTargets},names=[];
+ var required={"MZ.bindFocusTargets":MZ.bindFocusTargets,"MZ.inspectProject":MZ.inspectProject,"MZ.audioDestination":MZ.audioDestination,"MZ.insertAudioRange":MZ.insertAudioRange,"MZ.captureTimelineFrame":MZ.captureTimelineFrame,"MZ.pollTimelineFrame":MZ.pollTimelineFrame,"MZ.discardTimelineFrame":MZ.discardTimelineFrame,"MZ.selection":MZ.selection,"MZ.apply":MZ.apply,"MZ.projectContext":MZ.projectContext,"MZ.importInterchange":MZ.importInterchange,"VMV.diagnostics":VMV.diagnostics,"MZ.apiProbe":MZ.apiProbe,"MZ.easingProbe":MZ.easingProbe,"MZ.zoomPreview":MZ.zoomPreview,"VMV.getTargets":VMV.getTargets},names=[];
  for(var key in required){if(required.hasOwnProperty(key)){if(typeof required[key]!=="function")throw Error("Missing JSX method: "+key);names.push(key);}}
  return VMV.encode({ok:true,version:MZ.version,engine:"ExtendScript",methods:names});
 }catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0,fileName:String(e.fileName||"")});}};

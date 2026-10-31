@@ -86,8 +86,45 @@ MZ.probeRestore=function(param,value){
  VMV.checkResult(param.setTimeVarying(false),'Restore animation');VMV.setStatic(param,value);
  return !param.isTimeVarying();
 };
+/* Probe v2: is easing lost because ALTO sets interpolation per key while
+ * writing (before the next key exists)? Compares both orders and runs the
+ * real VMV.writeKeys + VMV.verifyBezier path. */
+MZ.probeClear=function(param){VMV.checkResult(param.setTimeVarying(true),'Animate');var keys=param.getKeys();if(keys)for(var i=keys.length-1;i>=0;i--)VMV.checkResult(param.removeKey(keys[i]),'Clear key');};
+MZ.orderProbe=function(param,t0,t1,a,b){
+ var out={},k0=VMV.time(t0),k1=VMV.time(t1),mid=VMV.time(t0+(t1-t0)*0.25);
+ MZ.probeClear(param);
+ VMV.checkResult(param.addKey(k0),'Key 1');VMV.checkResult(param.setValueAtKey(k0,a,true),'Value 1');param.setInterpolationTypeAtKey(k0,5,true);
+ VMV.checkResult(param.addKey(k1),'Key 2');VMV.checkResult(param.setValueAtKey(k1,b,true),'Value 2');param.setInterpolationTypeAtKey(k1,5,true);
+ out.perKeyOrder=MZ.probeValue(param.getValueAtTime(mid));
+ param.setInterpolationTypeAtKey(k0,5,true);param.setInterpolationTypeAtKey(k1,5,true);
+ out.afterAllKeys=MZ.probeValue(param.getValueAtTime(mid));
+ return out;
+};
+MZ.writeKeysProbe=function(param,sourceIn,span,a,b){
+ var plan={sourceIn:sourceIn,sourceRate:1,interpolation:5};
+ try{VMV.writeKeys(param,[[0,a],[span,b]],plan);return {ok:true,at25:MZ.probeValue(param.getValueAtTime(VMV.time(sourceIn+span*0.25)))};}
+ catch(e){var row={ok:false,error:String(e.message||e)};try{row.at25=MZ.probeValue(param.getValueAtTime(VMV.time(sourceIn+span*0.25)));}catch(ignored){}return row;}
+};
+/* Visible check: a 2-key Bezier punch-in on Motion Scale of the selected clip
+ * at the playhead (100% -> 118% over 0.4 s). It stays on the clip. */
+MZ.zoomPreview=function(){try{
+ var seq=app.project.activeSequence,targets=VMV.getTargets(seq);if(targets.length!==1)throw Error('Select exactly one video clip');
+ var t=targets[0],clip=t.clip,motion=null,i;
+ for(i=0;i<clip.components.numItems;i++)if(String(clip.components[i].matchName)==='AE.ADBE Motion'){motion=clip.components[i];break;}
+ if(!motion)throw Error('Motion component not found');
+ var scale=motion.properties[1];if(scale.isTimeVarying())throw Error('Motion Scale is already animated: use a clean test clip');
+ var duration=t.end-t.start,sourceIn=VMV.seconds(clip.inPoint),sourceOut=VMV.seconds(clip.outPoint),rate=(sourceOut-sourceIn)/duration;if(!(rate>0))rate=1;
+ var playhead=VMV.seconds(seq.getPlayerPosition()),offset=playhead>=t.start&&playhead<t.end-0.45?playhead-t.start:0;
+ if(duration<0.5)throw Error('Clip is too short');
+ var k0=VMV.time(sourceIn+offset*rate),k1=VMV.time(sourceIn+(offset+0.4)*rate),base=Number(scale.getValue());
+ MZ.probeClear(scale);
+ VMV.checkResult(scale.addKey(k0),'Key 1');VMV.checkResult(scale.addKey(k1),'Key 2');
+ VMV.checkResult(scale.setValueAtKey(k0,base,true),'Value 1');VMV.checkResult(scale.setValueAtKey(k1,base*1.18,true),'Value 2');
+ VMV.checkResult(scale.setInterpolationTypeAtKey(k0,5,true),'Ease 1');VMV.checkResult(scale.setInterpolationTypeAtKey(k1,5,true),'Ease 2');
+ return VMV.encode({ok:true,kind:'alto-zoom-preview',clip:t.name,atSeconds:Math.round((t.start+offset)*1000)/1000,from:base,to:Math.round(base*118)/100,keys:(scale.getKeys()||[]).length,at25:MZ.probeValue(scale.getValueAtTime(VMV.time(sourceIn+(offset+0.1)*rate)))});
+}catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0});}};
 MZ.easingProbe=function(){
- var seq=app.project.activeSequence,records=[],r={ok:true,kind:'alto-easing-probe',probeVersion:1,notes:[]},touched=[],t;
+ var seq=app.project.activeSequence,records=[],r={ok:true,kind:'alto-easing-probe',probeVersion:2,notes:[]},touched=[],t;
  try{
   var targets=VMV.getTargets(seq);if(targets.length!==1)throw Error('Select exactly one video clip for the key test');
   t=targets[0];var clip=t.clip,motion=null;
@@ -102,6 +139,8 @@ MZ.easingProbe=function(){
   r.clip={name:t.name,seconds:Math.round(duration*1000)/1000};
   touched.push([scale,original.scale]);r.motionScale=MZ.curveProbe(scale,t0,t1,100,200);
   touched.push([position,original.position]);r.motionPosition=MZ.curveProbe(position,t0,t1,[0.3,0.5],[0.7,0.5]);
+  r.order={scale:MZ.orderProbe(scale,t0,t1,100,200),position:MZ.orderProbe(position,t0,t1,[0.3,0.5],[0.7,0.5])};
+  r.altoWriteKeys={scale:MZ.writeKeysProbe(scale,sourceIn,t1-t0,100,200),position:MZ.writeKeysProbe(position,sourceIn,t1-t0,[0.3,0.5],[0.7,0.5])};
   r.motionRestored=MZ.probeRestore(scale,original.scale)&&MZ.probeRestore(position,original.position);touched=[];
   try{
    app.enableQE();var qt=VMV.qeClip(qe.project.getActiveSequence(),t,frame);

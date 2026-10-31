@@ -43,4 +43,19 @@ test('A failure while writing keys restores Motion before reporting',()=>{
  assert.equal(motion(f).properties[1].isTimeVarying(),false);assert.equal(motion(f).properties[1].getValue(),100);
  assert.equal(pos.isTimeVarying(),false);assert.equal(f.clips[0].components.length,3);
 });
+test('Key test v2 compares key orders and runs the real ALTO key writer',()=>{
+ const f=fixture(),r=JSON.parse(f.ctx.MZ.easingProbe());
+ assert(r.ok,r.error);assert.equal(r.probeVersion,2);
+ approx(r.order.scale.afterAllKeys,115.625,1e-3);assert(r.altoWriteKeys.scale.ok,r.altoWriteKeys.scale.error);assert(r.altoWriteKeys.position.ok,r.altoWriteKeys.position.error);
+ assert.equal(r.motionRestored,true);assert.equal(motion(f).properties[1].isTimeVarying(),false);assert.equal(motion(f).properties[1].getValue(),100);
+});
+test('Visible punch-in writes two eased Motion Scale keys from the playhead and keeps them',()=>{
+ const f=fixture(),r=JSON.parse(f.ctx.MZ.zoomPreview());
+ assert(r.ok,r.error);assert.equal(r.keys,2);const scale=motion(f).properties[1];
+ assert.deepEqual([...scale.interp.values()],[5,5]);assert.deepEqual([...scale.keys.values()].sort((a,b)=>a-b),[100,118]);
+ assert.equal(f.mutations(),0);
+});
+test('Visible punch-in refuses an animated Motion Scale',()=>{
+ const f=fixture();motion(f).properties[1].varying=true;const r=JSON.parse(f.ctx.MZ.zoomPreview());assert(!r.ok);assert.match(r.error,/already animated/);
+});
 console.log(JSON.stringify({passed,scope:'Mock Premiere DOM/QE; not a live Premiere run'}));
