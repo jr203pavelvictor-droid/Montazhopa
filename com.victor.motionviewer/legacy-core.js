@@ -96,7 +96,7 @@ var MZMotion = (function () {
     function settings(base,override){
         var o={},k;for(k in base)if(base.hasOwnProperty(k))o[k]=base[k];
         if(override)for(k in override)if(override.hasOwnProperty(k))o[k]=override[k];
-        o.mode=o.mode||'spring';
+        o.mode=o.mode||'smooth';
         if(!/^(smooth|snap|spring|linear|hold|bezier|easeIn|easeOut)$/.test(o.mode))throw new Error('Неизвестная кривая.');
         o.move=number(o.move,0.08,5,'длительность перехода');o.settle=number(o.settle,0.08,3,'время успокоения');
         o.overshoot=number(o.overshoot,0,0.6,'сила пружины');
@@ -164,8 +164,15 @@ var MZMotion = (function () {
             if(keys.length>=2 && same(keys[keys.length-1],k) && same(keys[keys.length-2],k)) keys[keys.length-1]=k;
             else keys.push(k);
         }
-        function between(a,b,p) {
-            return safe({scale:a.scale+(b.scale-a.scale)*p,x:a.x+(b.x-a.x)*p,y:a.y+(b.y-a.y)*p},protect);
+        // Camera move between two views. Zoom runs at an even perceived speed
+        // (geometric in scale); position stays linear in scale, so the flight is
+        // one zoom about a fixed point and the next word travels straight to its
+        // place on screen. zp only differs from p when the zoom delay is used.
+        // Linear keeps the literal constant percent change (two editable keys).
+        function zoomAt(a,b,p,geo){if(!geo)return a.scale+(b.scale-a.scale)*p;return a.scale>0&&b.scale>0&&Math.abs(b.scale-a.scale)>1e-9?a.scale*Math.pow(b.scale/a.scale,p):a.scale;}
+        function between(a,b,p,zp,geo) {
+            var s=zoomAt(a,b,typeof zp==='number'?zp:p,geo),w=typeof zp!=='number'&&Math.abs(b.scale-a.scale)>1e-6?(s-a.scale)/(b.scale-a.scale):p;
+            return safe({scale:s,x:a.x+(b.x-a.x)*w,y:a.y+(b.y-a.y)*w},protect);
         }
         add(poses[0]);
         for(i=0;i<segments.length;i++) {
@@ -177,13 +184,11 @@ var MZMotion = (function () {
                 p=seg.type==='move'?(1+overshoot)*ease(u,cfg):
                     1+overshoot*Math.pow(1-u,2)*Math.cos(2*Math.PI*cfg.cycles*u);
                 frame++;
-                var result=between(poses[seg.to-1],poses[seg.to],p);
+                var result;
                 if(seg.type==='move'&&cfg.delay!==0){
                     var zoomU=cfg.delay>0?(u-cfg.delay)/(1-cfg.delay):u/(1+cfg.delay);
-                    var zoomP=(1+overshoot)*ease(clamp(zoomU,0,1),cfg);
-                    result.scale=poses[seg.to-1].scale+(poses[seg.to].scale-poses[seg.to-1].scale)*zoomP;
-                    result=safe(result,protect);
-                }
+                    result=between(poses[seg.to-1],poses[seg.to],p,(1+overshoot)*ease(clamp(zoomU,0,1),cfg),cfg.mode!=='linear');
+                } else result=between(poses[seg.to-1],poses[seg.to],p,undefined,cfg.mode!=='linear');
                 add(result);
             }
             if(seg.type==='settle' || overshoot===0) arrivals[seg.to]=frame;

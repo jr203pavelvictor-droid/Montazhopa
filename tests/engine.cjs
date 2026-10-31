@@ -21,7 +21,10 @@ for(const fps of [23.976,25,29.97,60]){
  const opts={mode:'easeOut',move:1,settle:.2,overshoot:0,protect:false};
  const route=E.camera(stops,opts,fps),n=route.frames;
  const start=ctx.MZMotion.sample(route,0),mid=ctx.MZMotion.sample(route,n/2),end=ctx.MZMotion.sample(route,n);
- assert.equal(start.scale,100);assert.equal(end.scale,180);assert(mid.scale>165&&mid.scale<175);
- assert(Math.abs((mid.scale-start.scale)/(end.scale-start.scale)-.875)<.01);
+ assert.equal(start.scale,100);assert.equal(end.scale,180);
+ // Even perceived zoom speed: scale is geometric in the eased progress (.875 at mid for Ease Out).
+ assert(Math.abs(mid.scale-100*Math.pow(1.8,.875))<.6,'mid '+mid.scale);
+ // One zoom about a fixed point: position stays linear in scale, so the target travels straight.
+ const w=(mid.scale-100)/80;assert(Math.abs(mid.x-(start.x+(end.x-start.x)*w))<.002&&Math.abs(mid.y-(start.y+(end.y-start.y)*w))<.002);
 }
 console.log('PASS Motion Zoom Ease Out: mirror symmetry, monotonicity, endpoints and route sampling at four frame rates');
