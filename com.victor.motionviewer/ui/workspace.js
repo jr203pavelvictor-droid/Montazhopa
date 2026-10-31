@@ -115,7 +115,7 @@
   function restore() {
     const s=U.state,c=data.context;
     if(sections.includes(c.section)){s.section=c.section;s.screen=c.section==='motion'?'catalog':c.section;}
-    if(['motion','transitions','effects','camera'].includes(c.category))s.category=c.category;
+    if(['motion','presets','transitions','effects','camera'].includes(c.category))s.category=c.category;
     if(['all','preset','asset','tool','macro'].includes(c.searchFilter))s.searchFilter=c.searchFilter;
     if(['all','image','audio','video','mogrt','fragment'].includes(c.assetsFilter))s.assetsFilter=c.assetsFilter;
     if(c.screen==='camera')s.screen='camera';
