@@ -811,7 +811,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=AltoTimeline;
 
 
 /* Montazhopa 3 host adapter. Public DOM for data; QE only for effect insertion/removal. */
-var MZ={version:'4.0.0-beta.9',memory:{}};
+var MZ={version:'4.0.0-beta.10',memory:{}};
 MZ.hash=function(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))|0;return 'p'+(h>>>0).toString(16);};
 MZ.projectKey=function(){return String(app.project.path||'unsaved')+'|'+String(app.project.documentID||'');};
 MZ.storeFile=function(){var d=new Folder(Folder.userData.fsName+'/Montazhopa3/ownership');if(!d.exists&&!d.create())throw Error('Cannot create ownership directory');return new File(d.fsName+'/'+MZ.hash(MZ.projectKey())+'.json');};
@@ -1294,8 +1294,22 @@ MZ.zoomPreview=function(){try{
  VMV.checkResult(scale.setInterpolationTypeAtKey(k0,5,true),'Ease 1');VMV.checkResult(scale.setInterpolationTypeAtKey(k1,5,true),'Ease 2');
  return VMV.encode({ok:true,kind:'alto-zoom-preview',clip:t.name,atSeconds:Math.round((t.start+offset)*1000)/1000,from:base,to:Math.round(base*118)/100,keys:(scale.getKeys()||[]).length,at25:MZ.probeValue(scale.getValueAtTime(VMV.time(sourceIn+(offset+0.1)*rate))),samples:MZ.probeSamples(scale,sourceIn+offset*rate,sourceIn+(offset+0.4)*rate,base,base*1.18)});
 }catch(e){return VMV.encode({ok:false,error:String(e.message||e),line:e.line||0});}};
+/* Probe v4: fresh keys per interpolation pair (k0 code - k1 code), sampled at
+ * 12.5/25/50/75/87.5 %, on two spans, to find a true ease-in-out pair. */
+MZ.freshCurve=function(param,t0,t1,a,b,i0,i1){
+ MZ.probeClear(param);var k0=VMV.time(t0),k1=VMV.time(t1);
+ VMV.checkResult(param.addKey(k0),'Key 1');VMV.checkResult(param.addKey(k1),'Key 2');
+ VMV.checkResult(param.setValueAtKey(k0,a,true),'Value 1');VMV.checkResult(param.setValueAtKey(k1,b,true),'Value 2');
+ param.setInterpolationTypeAtKey(k0,i0,true);param.setInterpolationTypeAtKey(k1,i1,true);
+ return MZ.probeSamples(param,t0,t1,a,b);
+};
+MZ.curveMatrix=function(param,spans,a,b,pairs){
+ var out={};
+ for(var s=0;s<spans.length;s++){var sp=spans[s],row={};for(var i=0;i<pairs.length;i++){var key=pairs[i][0]+'-'+pairs[i][1];try{row[key]=MZ.freshCurve(param,sp[0],sp[1],a,b,pairs[i][0],pairs[i][1]);}catch(e){row[key]='error: '+String(e.message||e);}}out[sp[2]]=row;}
+ return out;
+};
 MZ.easingProbe=function(){
- var seq=app.project.activeSequence,records=[],r={ok:true,kind:'alto-easing-probe',probeVersion:3,notes:[]},touched=[],t;
+ var seq=app.project.activeSequence,records=[],r={ok:true,kind:'alto-easing-probe',probeVersion:4,notes:[]},touched=[],t;
  try{
   var targets=VMV.getTargets(seq);if(targets.length!==1)throw Error('Select exactly one video clip for the key test');
   t=targets[0];var clip=t.clip,motion=null;
@@ -1305,19 +1319,24 @@ MZ.easingProbe=function(){
   if(!(duration>=frame*8))throw Error('Clip is too short for the key test');
   var t0=sourceIn,t1=sourceIn+Math.min(1,duration*0.6);
   var position=motion.properties[0],scale=motion.properties[1];
-  if(position.isTimeVarying()||scale.isTimeVarying())throw Error('Motion Position/Scale is already animated: use a clean test clip');
-  var original={position:position.getValue(),scale:scale.getValue()};
   r.clip={name:t.name,seconds:Math.round(duration*1000)/1000};
+  var motionFree=!(position.isTimeVarying()||scale.isTimeVarying());
+  if(!motionFree)r.notes.push('Motion Position/Scale is already animated: Motion tests skipped, Transform tests still run');
+  var original=motionFree?{position:position.getValue(),scale:scale.getValue()}:null;
+  if(motionFree){
   touched.push([scale,original.scale]);r.motionScale=MZ.curveProbe(scale,t0,t1,100,200);
   touched.push([position,original.position]);r.motionPosition=MZ.curveProbe(position,t0,t1,[0.3,0.5],[0.7,0.5]);
   r.order={scale:MZ.orderProbe(scale,t0,t1,100,200),position:MZ.orderProbe(position,t0,t1,[0.3,0.5],[0.7,0.5])};
   r.altoWriteKeys={scale:MZ.writeKeysProbe(scale,sourceIn,t1-t0,100,200),position:MZ.writeKeysProbe(position,sourceIn,t1-t0,[0.3,0.5],[0.7,0.5])};
   r.motionRestored=MZ.probeRestore(scale,original.scale)&&MZ.probeRestore(position,original.position);touched=[];
+  }
   try{
    app.enableQE();var qt=VMV.qeClip(qe.project.getActiveSequence(),t,frame);
    var transform=VMV.addEffect(seq,t,qt,VMV.effect('AE.ADBE Geometry2',['Transform','Преобразование','Трансформация']),'AE.ADBE Geometry2',records);
    r.transformScale=MZ.curveProbe(transform.properties[3],t0,t1,100,200);
    r.transformPosition=MZ.curveProbe(transform.properties[1],t0,t1,[0.3,0.5],[0.7,0.5]);
+   var midAt=sourceIn+Math.max(0,Math.min(2,duration-0.6)),spans=[[t0,t0+1>sourceIn+duration?t1:t0+1,'start-1s'],[midAt,midAt+0.4,'mid-0.4s']];
+   r.matrix={scale:MZ.curveMatrix(transform.properties[3],spans,100,200,[[0,0],[1,1],[2,2],[3,3],[5,5],[6,6],[2,1],[1,2],[5,1],[2,5],[3,1],[2,3],[5,3],[3,5]]),position:MZ.curveMatrix(transform.properties[1],spans,[0.3,0.5],[0.7,0.5],[[0,0],[5,5],[2,1],[3,3],[6,6],[5,1],[2,5]])};
   }catch(te){r.transformError=String(te.message||te);}
   r.transformLeft=VMV.rollback(seq,records);records=[];
   return VMV.encode(r);

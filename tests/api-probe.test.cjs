@@ -28,9 +28,10 @@ test('Key test measures linear and Bezier curves, then restores Motion and remov
  assert.equal(motion(f).properties[0].isTimeVarying(),false);assert.equal(motion(f).properties[1].isTimeVarying(),false);
  assert.deepEqual(motion(f).properties[0].getValue(),[.5,.5]);assert.equal(motion(f).properties[1].getValue(),100);
 });
-test('Key test refuses an already animated Motion and changes nothing',()=>{
- const f=fixture();motion(f).properties[1].varying=true;const r=JSON.parse(f.ctx.MZ.easingProbe());
- assert(!r.ok);assert.match(r.error,/already animated/);assert.equal(f.mutations(),0);assert.equal(writes(f),0);
+test('Key test skips an already animated Motion but still measures the temporary Transform',()=>{
+ const f=fixture();motion(f).properties[1].varying=true;const before=writes(f);const r=JSON.parse(f.ctx.MZ.easingProbe());
+ assert(r.ok,r.error);assert(r.notes.some(n=>/already animated/.test(n)));assert.equal(r.motionScale,undefined);assert(r.matrix.scale['start-1s']['5-5']);assert.equal(r.transformLeft,0);
+ assert.equal(f.clips[0].components.length,3);assert.equal(motion(f).properties[0].writes,0);
 });
 test('Key test needs exactly one selected clip',()=>{
  const f=fixture([clip('A',0,3),clip('B',3,3)]),r=JSON.parse(f.ctx.MZ.easingProbe());
@@ -45,7 +46,7 @@ test('A failure while writing keys restores Motion before reporting',()=>{
 });
 test('Key test v2 compares key orders and runs the real ALTO key writer',()=>{
  const f=fixture(),r=JSON.parse(f.ctx.MZ.easingProbe());
- assert(r.ok,r.error);assert.equal(r.probeVersion,3);
+ assert(r.ok,r.error);assert.equal(r.probeVersion,4);
  approx(r.order.scale.afterAllKeys,115.625,1e-3);assert(r.altoWriteKeys.scale.ok,r.altoWriteKeys.scale.error);assert(r.altoWriteKeys.position.ok,r.altoWriteKeys.position.error);
  assert.equal(r.motionRestored,true);assert.equal(motion(f).properties[1].isTimeVarying(),false);assert.equal(motion(f).properties[1].getValue(),100);
 });
