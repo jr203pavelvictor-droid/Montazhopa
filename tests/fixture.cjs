@@ -45,19 +45,19 @@ function clip(name,start,duration,options={}){
 }
 function fixture(clips=[clip('Photo',12,3)],options={}){
  let mutations=0;
- const sequence={sequenceID:'sequence-test-01',frameSizeHorizontal:options.width||1920,frameSizeVertical:options.height||1080,getPlayerPosition:()=>new Time(options.playhead??12),timebase:String(TICKS/(options.fps??25)),videoTracks:collection([{clips:collection(clips),isLocked:()=>!!options.locked}],'numTracks')};
+ const sequence={sequenceID:'sequence-test-01',frameSizeHorizontal:options.width||1920,frameSizeVertical:options.height||1080,getPlayerPosition:()=>new Time(options.playhead??12),timebase:String(TICKS/(options.fps??25)),videoTracks:collection([{clips:collection(clips),transitions:{numItems:0},isLocked:()=>!!options.locked}],'numTracks')};
  if(options.markers){const list=options.markers.map(t=>({start:new Time(t)}));sequence.markers={numMarkers:list.length,getFirstMarker:()=>list[0]||null,getNextMarker:m=>list[list.indexOf(m)+1]||null};}
  const qitems=[];
  for(const c of clips){
   qitems.push({type:'Empty',name:'',start:{secs:0},end:{secs:Number(c.start.ticks)/TICKS}});
   const qi={type:'Clip',name:c.name,start:{secs:Number(c.start.ticks)/TICKS},end:options.noQEEnd?undefined:{secs:Number(c.end.ticks)/TICKS},
    addVideoEffect(effect){mutations++;c.components.push(component(effect.matchName,options));if(options.throwAfterAdd)throw Error('Injected add failure');},
-   get numComponents(){return c.components.length;},getComponentAt(i){return options.noRemove?{}:{remove(){c.components.splice(i,1);}}}};
+   addTransition(tr){if(options.transitionNoop)return;mutations++;sequence.videoTracks[0].transitions.numItems++;qi.lastTransition=tr.name;},get numComponents(){return c.components.length;},getComponentAt(i){return options.noRemove?{}:{remove(){c.components.splice(i,1);}}}};
   qitems.push(qi);
  }
  if(options.ambiguous)qitems.push(qitems[qitems.length-1]);
  const qseq={getVideoTrackAt:i=>({numItems:qitems.length,getItemAt:j=>qitems[j]})};
- const context={Time,app:{version:'25.5.0',project:{activeSequence:sequence},enableQE(){}},qe:{project:{getActiveSequence:()=>qseq,getVideoEffectList:()=>['Transform','Gaussian Blur'],getVideoEffectByName:name=>name==='Gaussian Blur'?{matchName:'AE.ADBE Gaussian Blur 2'}:name==='AE.ADBE Geometry2'||name==='AE.ADBE Drop Shadow'?{matchName:name}:null}}};
+ const context={Time,app:{version:'25.5.0',project:{activeSequence:sequence},enableQE(){}},qe:{project:{getActiveSequence:()=>qseq,getVideoEffectList:()=>['Transform','Gaussian Blur'],getVideoEffectByName:name=>name==='Gaussian Blur'?{matchName:'AE.ADBE Gaussian Blur 2'}:name==='AE.ADBE Geometry2'||name==='AE.ADBE Drop Shadow'?{matchName:name}:null,getVideoTransitionList:()=>['Cross Dissolve','Dip to Black','Push','Iris Round'],getVideoTransitionByName:name=>['Cross Dissolve','Dip to Black','Push','Iris Round'].includes(name)?{name}:null}}};
  // The real CEP ExtendScript runtime exposes File() and $.evalFile().
  // Simulate only the loader here so host.jsx can execute its companion module
  // without changing production code or relying on a real Premiere process.

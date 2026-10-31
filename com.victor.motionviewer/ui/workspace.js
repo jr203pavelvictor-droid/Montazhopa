@@ -39,7 +39,7 @@
     window.AltoSurfaces.refresh();
     activeKey=key();U.$('main').scrollTop=Number(data.scroll[activeKey])||0;
     const s=U.state;
-    const names={home:U.t('Главная','Home'),motion:U.t('Движение','Motion'),assets:U.t('Библиотека','Library'),sounds:U.t('Звук','Sounds'),tools:U.t('Инструменты','Tools'),automation:U.t('Сценарии','Workflows')};
+    const names={home:U.t('Главная','Home'),motion:U.t('Движение','Motion'),assets:U.t('Мои материалы','My media'),sounds:U.t('Звук','Sounds'),tools:U.t('Инструменты','Tools'),automation:U.t('Сценарии','Workflows')};
     const label=s.query.trim()?U.t('Поиск','Search'):s.screen==='settings'?U.t('Настройки','Settings'):s.screen==='camera'?'Motion Zoom':s.screen==='detail'?(window.MZCatalog.find(x=>x.id===s.selected)||{}).title:s.screen==='favorites'?U.t('Избранное','Favorites'):names[s.section];
     U.$('context-label').textContent=label||names[s.section]||'ALTO';
     document.title='ALTO 4.0 · '+U.$('context-label').textContent;
@@ -69,7 +69,7 @@
     }
     const keywords={cut:'silence remove cut тишина паузы',captions:'transcription subtitles субтитры речь',sync:'sync synchronize alignment синхронизация',watch:'watch folder auto import папки автоимпорт',macro:'automation batch макрос сценарий',photo:'image picture фото',duplicate:'backup copy копия',localtools:'python ffmpeg whisper local doctor диагностика'};
     for(const d of A.tools)list.push({id:'tool:'+d[0],type:'tool',name:d[1+lang],subtitle:d[3+lang],group:U.t('Инструменты','Tools'),tags:d.slice(1,5).join(' ')+' '+(keywords[d[0]]||''),icon:d[5],open:()=>{A.navigate('tools');A.openWorkflow(d[0]);}});
-    for(const x of L.read('assets.json',[]))list.push({id:'asset:'+x.id,sourceID:x.id,type:'asset',name:x.name,subtitle:x.type==='audio'?U.t('Прослушать звук','Listen to sound'):U.t('Показать в библиотеке','Show in library'),group:U.t('Библиотека','Library'),tags:x.name+' '+(x.tags||'')+' '+x.type,icon:x.type==='audio'?'sound':'assets',open:()=>{U.state.assetsFilter='all';A.navigate(x.type==='audio'?'sounds':'assets');if(x.type==='audio')A.playAudio(x);else{const card=U.$('main').querySelector('[data-asset-id="'+String(x.id).replace(/[^a-zA-Z0-9_-]/g,'')+'"]');if(card){card.scrollIntoView({block:'center'});const b=card.querySelector('button');if(b)b.focus();}}}});
+    for(const x of L.read('assets.json',[]))list.push({id:'asset:'+x.id,sourceID:x.id,type:'asset',name:x.name,subtitle:x.type==='audio'?U.t('Прослушать звук','Listen to sound'):U.t('Показать в материалах','Show in my media'),group:U.t('Мои материалы','My media'),tags:x.name+' '+(x.tags||'')+' '+x.type,icon:x.type==='audio'?'sound':'assets',open:()=>{U.state.assetsFilter='all';A.navigate(x.type==='audio'?'sounds':'assets');if(x.type==='audio')A.playAudio(x);else{const card=U.$('main').querySelector('[data-asset-id="'+String(x.id).replace(/[^a-zA-Z0-9_-]/g,'')+'"]');if(card){card.scrollIntoView({block:'center'});const b=card.querySelector('button');if(b)b.focus();}}}});
     for(const m of L.read('macros.json',[]))list.push({id:'macro:'+m.id,type:'macro',name:m.name,subtitle:U.t('Открыть сценарий','Review workflow'),group:U.t('Сценарии','Workflows'),tags:m.name+' workflow macro сценарий',icon:'motion',open:()=>A.reviewMacro(m)});
     return list;
   }
@@ -84,9 +84,10 @@
   function home() {
     const m=U.$('main'),hero=U.el('section','home-hero'),logo=U.el('img','hero-logo');logo.src='assets/brand/alto-symbol.svg';logo.alt='ALTO';
     const title=U.el('h2');title.append(document.createTextNode(U.t('Движение.','Motion.')),U.el('br'),document.createTextNode(U.t('В одно касание.','At your fingertips.')));
-    hero.append(logo,U.el('p','eyebrow',U.t('ВАШЕ РАБОЧЕЕ ПРОСТРАНСТВО','YOUR CREATIVE SPACE')),title,U.el('p','',U.t('Анимация, звук и монтаж.','Motion, sound and editing.')),U.button(U.t('Открыть анимации  →','Explore animations  →'),()=>A.navigate('motion'),'primary'));m.append(hero);
+    // The decorative hero block was removed: the dock already opens Motion, and the space goes to tools.
+    void hero;void logo;void title;
     const quick=U.el('section','home-quick');quick.append(U.el('h3','',U.t('Быстрые инструменты','Quick tools')));const grid=U.el('div','home-quick-grid');
-    for(const [id,name,en,desc,enDesc,glyph]of [['camera','Motion Zoom','Motion Zoom','Ракурсный зум','Camera movement','camera'],['cut','Убрать тишину','Remove pauses','Черновой монтаж','Rough cut','beat'],['captions','Субтитры и повторы','Captions and retakes','Речь → SRT','Speech → SRT','native'],['sync','Синхронизация звука','Audio alignment','Две записи · один сдвиг','Two recordings · one offset','sound']]){const button=U.button('',()=>{if(id==='camera')A.openTool('camera');else{A.navigate('tools');A.openWorkflow(id);}});button.innerHTML=A.svg(glyph);button.append(U.el('strong','',U.t(name,en)),U.el('small','',U.t(desc,enDesc)));grid.append(button);}quick.append(grid);m.append(quick);
+    for(const [id,name,en,desc,enDesc,glyph]of [['camera','Motion Zoom','Motion Zoom','Камера по словам в кадре','Camera across the frame','camera'],['cut','Убрать тишину','Remove pauses','Черновой монтаж','Rough cut','beat'],['captions','Субтитры и повторы','Captions and retakes','Речь → SRT','Speech → SRT','native'],['sync','Синхронизация звука','Audio alignment','Две записи · один сдвиг','Two recordings · one offset','sound']]){const button=U.button('',()=>{if(id==='camera')A.openTool('camera');else{A.navigate('tools');A.openWorkflow(id);}});button.innerHTML=A.svg(glyph);button.append(U.el('strong','',U.t(name,en)),U.el('small','',U.t(desc,enDesc)));grid.append(button);}quick.append(grid);m.append(quick);
     const all=items(),columns=U.el('div','home-columns'),pinned=U.el('section','home-section'),recent=U.el('details','home-section home-recent');
     const ph=heading('Избранное','Favorites');ph.append(U.button(U.t('Все инструменты','All tools'),()=>A.navigate('tools'),'reference-link'));pinned.append(ph);
     const picks=data.pins.map(id=>all.find(x=>x.id===id)).filter(Boolean).concat(all.filter(x=>x.type!=='tool'&&x.type!=='macro'&&isPinned(x)));for(const x of picks.slice(0,8))pinned.append(row(x));

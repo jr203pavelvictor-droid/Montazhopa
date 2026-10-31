@@ -14,7 +14,7 @@ let pw;try{pw=require(process.env.MZ_PLAYWRIGHT_MODULE||'playwright');}catch{pw=
  async function nav(section){await page.locator('#more-toggle').click();await page.locator(`[data-section="${section}"]`).click();}
  const audit=[];
  for(const width of [300,420,600,960]){await page.setViewportSize({width,height:width===300?700:850});for(const screen of ['home','motion','camera','settings']){
-  if(screen==='camera')await page.locator('[data-dock="camera"]').click();else if(screen==='settings')await page.locator('[data-dock="settings"]').click();else await page.locator(`[data-dock="${screen}"]`).click();
+  if(screen==='camera')await page.locator('[data-dock="camera"]').click();else if(screen==='settings')await page.locator('#settings-toggle').click();else await page.locator(`[data-dock="${screen}"]`).click();
   await page.waitForTimeout(150);await page.mouse.move(0,0);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${width} ${screen}`);
   assert.equal(await page.locator('#main').evaluate(e=>e.scrollWidth>e.clientWidth),false,`${width} ${screen} main`);
@@ -29,6 +29,12 @@ let pw;try{pw=require(process.env.MZ_PLAYWRIGHT_MODULE||'playwright');}catch{pw=
  await page.locator('.point-details summary').click();await page.getByRole('button',{name:'Дублировать точку',exact:true}).click();await page.locator('.point-details summary').click();assert.equal(await page.locator('.stop-row').count(),5);await page.getByRole('button',{name:'Удалить точку',exact:true}).click();assert.equal(await page.locator('.stop-row').count(),4);
  await page.locator('.stop-row').nth(1).locator('.stop-number').dragTo(page.locator('.stop-row').nth(2));assert.equal(await page.evaluate(()=>MZDebug.state.cameraIndex),2);
  const frame=await page.locator('#camera-map').boundingBox();await page.locator('#camera-map').click({position:{x:frame.width*.7,y:frame.height*.4}});assert(Math.abs(await page.evaluate(()=>MZDebug.getCamera().stops[MZDebug.state.cameraIndex].fx)-.7)<.02);
+ // A route longer than the layer is offered a squeeze instead of failing.
+ {const saved=await page.evaluate(()=>MZDebug.getCamera().stops.map(p=>p.hold)),selectedIndex=await page.evaluate(()=>MZDebug.state.cameraIndex);await page.evaluate(()=>{for(const p of MZDebug.getCamera().stops)p.hold=5;});
+  for(let i=0;i<40&&!(await page.evaluate(()=>!!MZDebug.state.cameraInfo));i++){if(i===0)await page.getByRole('button',{name:'Подключить выделенный слой',exact:true}).click();await page.waitForTimeout(100);}
+  await page.locator('.stop-row').nth(0).locator('.stop-name').click();await page.locator('#camera-action-footer .camera-apply').click();await page.locator('#modal:not([hidden])').waitFor();assert.match(await page.locator('#modal-title').innerText(),/длиннее слоя/);
+  await page.locator('#modal-actions').getByRole('button',{name:'Ужать',exact:true}).click();for(let i=0;i<30&&!(await page.locator('#status').innerText()).includes('Маршрут применён');i++)await page.waitForTimeout(100);assert.match(await page.locator('#status').innerText(),/Маршрут применён/);
+  await page.evaluate(h=>MZDebug.getCamera().stops.forEach((p,i)=>p.hold=h[i]),saved);await page.locator('.stop-row').nth(selectedIndex).locator('.stop-name').click();}
  // Motion Zoom 2.0: a box drawn around a word frames the selected view.
  await page.evaluate(()=>document.getElementById('camera-map').scrollIntoView({block:'center'}));const map=await page.locator('#camera-map').boundingBox();
  await page.mouse.move(map.x+map.width*.08,map.y+map.height*.62);await page.mouse.down();await page.mouse.move(map.x+map.width*.18,map.y+map.height*.67,{steps:4});await page.mouse.move(map.x+map.width*.28,map.y+map.height*.72,{steps:4});
@@ -41,8 +47,16 @@ let pw;try{pw=require(process.env.MZ_PLAYWRIGHT_MODULE||'playwright');}catch{pw=
  await page.locator('#camera-markers-align').click();await page.waitForTimeout(300);
  const arrivals=await page.evaluate(()=>{const c=MZDebug.getCamera();return MZEngine.camera(c.stops,Object.assign({},c.options,{fitFrames:null}),25).arrivals;});assert.deepEqual(arrivals.slice(1),[40,80,125],JSON.stringify(arrivals));
  assert.match(await page.locator('#status').innerText(),/По маркерам: 3/);
+ // The 84 ALTO 3 presets: list from the host, live preview, apply to the selected clip.
+ await page.locator('[data-dock="motion"]').click();await page.locator('#main').getByRole('button',{name:'Пресеты',exact:true}).click();
+ for(let i=0;i<40&&!(await page.locator('.preset-row').count());i++)await page.waitForTimeout(100);
+ assert.equal(await page.locator('.preset-row').count(),84);assert.equal(await page.locator('.preset-group h3').count(),6);
+ await page.locator('[data-preset="IN_3"]').click();assert.match(await page.locator('.preset-info strong').innerText(),/Punch In/);
+ await page.waitForTimeout(120);assert.notEqual(await page.locator('.preset-subject').evaluate(e=>e.style.transform),'','preview animates');
+ {const before=f.clips[0].components.length;await page.locator('#preset-apply').click();for(let i=0;i<30&&f.clips[0].components.length===before;i++)await page.waitForTimeout(100);assert.equal(f.clips[0].components.at(-1).matchName,'AE.ADBE Geometry2','preset applied as Transform');assert.match(await page.locator('#status').innerText(),/Punch In/);}
+ await page.locator('[data-preset="SHD_2"]').click();assert.match(await page.locator('.preset-subject').evaluate(e=>e.style.filter),/drop-shadow/);
  for(const section of ['assets','sounds','tools','automation']){await nav(section);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
- await page.locator('[data-dock="settings"]').click();await page.locator('#settings-lang').selectOption('en');assert.equal(await page.locator('[data-dock="home"]').innerText(),'Home');await page.locator('#settings-lang').selectOption('ru');
+ await page.locator('#settings-toggle').click();await page.locator('#settings-lang').selectOption('en');assert.equal(await page.locator('[data-dock="home"]').innerText(),'Home');await page.locator('#settings-lang').selectOption('ru');
  const before=f.mutations();
  await page.evaluate(()=>{const p=MZVibeAudio.AudioPreview,c=new AudioContext(),b=c.createBuffer(2,16000,8000);b.getChannelData(1).fill(.5);p.loadToken=(p.loadToken||0)+1;p.audioCtx=c;p.audioBuffer=b;p.asset={id:'qa-audio',name:'QA stereo'};p.waveformData={bars:[.1,.5,1,.5],duration:2};p.el.classList.remove('hidden');p.el.classList.add('visible');p.el.style.display='flex';document.body.classList.add('audio-preview-open');p.resizeCanvas();p.selectRange(.2,1.8);});
  await page.locator('.audio-range-controls input[aria-label="Fade In"]').fill('.2');await page.locator('.audio-range-controls input[aria-label="Fade In"]').press('Tab');
